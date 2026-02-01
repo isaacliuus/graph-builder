@@ -50,3 +50,6 @@ htmlcov/
 # Environment variables
 .env
 .env.local
+
+c-session-*.txt
+.cursor/
