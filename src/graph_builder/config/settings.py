@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     spacy_model: str = "en_core_web_sm"
 
     # LLM settings
-    openai_api_key: str = ""
+    #TODO: move this to the .env file
+    openai_api_key: str = "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"
     llm_model: str = "gpt-4o-mini"
 
     # Extraction settings

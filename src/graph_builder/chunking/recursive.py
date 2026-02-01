@@ -33,6 +33,7 @@ class RecursiveChunker(ChunkerBase):
         for doc in documents:
             split_texts = self._splitter.split_text(doc.content)
 
+            #TODO: make this more efficient
             current_index = 0
             for text in split_texts:
                 start_index = doc.content.find(text, current_index)

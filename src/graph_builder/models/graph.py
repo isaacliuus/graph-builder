@@ -33,6 +33,7 @@ class GraphNode(BaseModel):
 class GraphEdge(BaseModel):
     """An edge in the knowledge graph."""
 
+    # node ids
     source_id: UUID
     target_id: UUID
     type: RelationshipType
