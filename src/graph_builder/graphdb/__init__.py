@@ -1,6 +1,7 @@
 """Graph database persistence layer with lazy loading for optional dependencies."""
 
 from graph_builder.graphdb.base import GraphDBBase
+from graph_builder.graphdb.factory import create_graphdb_from_settings
 
 
 def __getattr__(name: str):
@@ -15,7 +16,7 @@ def __getattr__(name: str):
 
 def __dir__():
     """List available module attributes including lazy-loaded ones."""
-    return ["GraphDBBase", "MemgraphGraphDB"]
+    return ["GraphDBBase", "MemgraphGraphDB", "create_graphdb_from_settings"]
 
 
-__all__ = ["GraphDBBase"]
+__all__ = ["GraphDBBase", "create_graphdb_from_settings"]

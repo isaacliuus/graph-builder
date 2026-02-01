@@ -68,34 +68,49 @@ class PipelineBuilder:
 
     @classmethod
     def default(cls) -> Pipeline:
-        """Create a default pipeline with spaCy-based extraction."""
+        """Create a default pipeline with spaCy-based extraction.
+
+        If GRAPH_BUILDER_USE_GRAPHDB is enabled, automatically connects to
+        the configured Memgraph database for persistence.
+        """
         from graph_builder.chunking.recursive import RecursiveChunker
         from graph_builder.extraction.spacy_extractor import (
             SpacyEntityExtractor,
             SpacyRelationshipExtractor,
         )
         from graph_builder.graph.networkx_builder import NetworkXGraphBuilder
+        from graph_builder.graphdb.factory import create_graphdb_from_settings
 
-        return (
+        builder = (
             cls()
             .with_chunker(RecursiveChunker())
             .with_entity_extractor(SpacyEntityExtractor())
             .with_relationship_extractor(SpacyRelationshipExtractor())
             .with_graph_builder(NetworkXGraphBuilder())
-            .build()
         )
+
+        graphdb = create_graphdb_from_settings()
+        if graphdb is not None:
+            builder = builder.with_graphdb(graphdb)
+
+        return builder.build()
 
     @classmethod
     def with_llm(cls, api_key: str, model: str = "gpt-4o-mini") -> Pipeline:
-        """Create a pipeline with LLM-based extraction."""
+        """Create a pipeline with LLM-based extraction.
+
+        If GRAPH_BUILDER_USE_GRAPHDB is enabled, automatically connects to
+        the configured Memgraph database for persistence.
+        """
         from graph_builder.chunking.recursive import RecursiveChunker
         from graph_builder.extraction.llm_extractor import (
             LLMEntityExtractor,
             LLMRelationshipExtractor,
         )
         from graph_builder.graph.networkx_builder import NetworkXGraphBuilder
+        from graph_builder.graphdb.factory import create_graphdb_from_settings
 
-        return (
+        builder = (
             cls()
             .with_chunker(RecursiveChunker())
             .with_entity_extractor(LLMEntityExtractor(api_key=api_key, model=model))
@@ -103,5 +118,10 @@ class PipelineBuilder:
                 LLMRelationshipExtractor(api_key=api_key, model=model)
             )
             .with_graph_builder(NetworkXGraphBuilder())
-            .build()
         )
+
+        graphdb = create_graphdb_from_settings()
+        if graphdb is not None:
+            builder = builder.with_graphdb(graphdb)
+
+        return builder.build()
