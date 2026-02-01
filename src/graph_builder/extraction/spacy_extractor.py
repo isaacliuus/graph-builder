@@ -7,6 +7,7 @@ from graph_builder.models.document import Chunk
 from graph_builder.models.entity import Entity, EntityType
 from graph_builder.models.relationship import Relationship, RelationshipType
 from graph_builder.extraction.base import EntityExtractorBase, RelationshipExtractorBase
+from graph_builder.extraction.utils import group_entities_by_chunk
 
 
 # Mapping from spaCy entity labels to our EntityType
@@ -55,7 +56,7 @@ class SpacyEntityExtractor(EntityExtractorBase):
         entities: list[Entity] = []
 
         for chunk in chunks:
-            doc = self.nlp(chunk.content)
+            doc = self.nlp(chunk.content)  # pylint: disable=not-callable
 
             for ent in doc.ents:
                 entity_type = SPACY_TO_ENTITY_TYPE.get(ent.label_, EntityType.OTHER)
@@ -94,15 +95,7 @@ class SpacyRelationshipExtractor(RelationshipExtractorBase):
     ) -> list[Relationship]:
         """Extract relationships using dependency parsing and co-occurrence."""
         relationships: list[Relationship] = []
-
-        # Group entities by chunk
-        entities_by_chunk: dict[str, list[Entity]] = {}
-        for entity in entities:
-            if entity.chunk_id:
-                chunk_key = str(entity.chunk_id)
-                if chunk_key not in entities_by_chunk:
-                    entities_by_chunk[chunk_key] = []
-                entities_by_chunk[chunk_key].append(entity)
+        entities_by_chunk = group_entities_by_chunk(entities)
 
         # For each chunk, find relationships between co-occurring entities
         for chunk in chunks:
@@ -110,7 +103,7 @@ class SpacyRelationshipExtractor(RelationshipExtractorBase):
             if len(chunk_entities) < 2:
                 continue
 
-            doc = self.nlp(chunk.content)
+            doc = self.nlp(chunk.content)  # pylint: disable=not-callable
 
             # Create relationships based on syntactic proximity and verb connections
             for i, entity1 in enumerate(chunk_entities):
@@ -135,25 +128,27 @@ class SpacyRelationshipExtractor(RelationshipExtractorBase):
     ) -> RelationshipType | None:
         """Infer relationship type based on connecting verbs."""
         text_lower = doc.text.lower()
-        e1_lower = entity1_name.lower()
-        e2_lower = entity2_name.lower()
 
-        # Check for common relationship patterns
-        if "founded" in text_lower or "started" in text_lower or "created" in text_lower:
-            return RelationshipType.FOUNDED
-        if "works" in text_lower or "employed" in text_lower or "joined" in text_lower:
-            return RelationshipType.WORKS_FOR
-        if "located" in text_lower or "based" in text_lower or "in" in text_lower:
+        # Keyword to relationship type mapping
+        keyword_patterns: dict[RelationshipType, list[str]] = {
+            RelationshipType.FOUNDED: ["founded", "started", "created"],
+            RelationshipType.WORKS_FOR: ["works", "employed", "joined"],
+            RelationshipType.ACQUIRED: ["acquired", "bought"],
+            RelationshipType.PARTNER_OF: ["partner"],
+            RelationshipType.SUBSIDIARY_OF: ["subsidiary"],
+            RelationshipType.MEMBER_OF: ["member"],
+        }
+
+        for rel_type, keywords in keyword_patterns.items():
+            if any(kw in text_lower for kw in keywords):
+                return rel_type
+
+        # Special case for location relationships
+        if any(kw in text_lower for kw in ["located", "based", "headquartered"]):
+            e1_lower = entity1_name.lower()
+            e2_lower = entity2_name.lower()
             if e1_lower in text_lower and e2_lower in text_lower:
                 return RelationshipType.LOCATED_IN
-        if "acquired" in text_lower or "bought" in text_lower:
-            return RelationshipType.ACQUIRED
-        if "partner" in text_lower:
-            return RelationshipType.PARTNER_OF
-        if "subsidiary" in text_lower:
-            return RelationshipType.SUBSIDIARY_OF
-        if "member" in text_lower:
-            return RelationshipType.MEMBER_OF
 
         # Default to RELATED_TO for co-occurring entities
         return RelationshipType.RELATED_TO

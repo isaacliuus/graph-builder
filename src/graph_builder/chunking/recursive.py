@@ -6,7 +6,7 @@ from graph_builder.models.document import Document, Chunk
 from graph_builder.chunking.base import ChunkerBase
 
 
-class RecursiveChunker(ChunkerBase):
+class RecursiveChunker(ChunkerBase):  # pylint: disable=too-few-public-methods
     """Chunker using langchain's RecursiveCharacterTextSplitter."""
 
     def __init__(

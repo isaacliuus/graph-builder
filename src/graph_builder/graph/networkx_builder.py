@@ -121,6 +121,6 @@ class NetworkXGraphBuilder(GraphBuilderBase):
                     if k not in ("type", "weight", "confidence", "description")
                 },
             )
-            graph.edges.append(edge)
+            graph.edges.append(edge)  # pylint: disable=no-member
 
         return graph

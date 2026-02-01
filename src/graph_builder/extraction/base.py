@@ -7,16 +7,15 @@ from graph_builder.models.entity import Entity
 from graph_builder.models.relationship import Relationship
 
 
-class EntityExtractorBase(ABC):
+class EntityExtractorBase(ABC):  # pylint: disable=too-few-public-methods
     """Abstract base class for entity extractors."""
 
     @abstractmethod
     def extract(self, chunks: list[Chunk]) -> list[Entity]:
         """Extract entities from chunks."""
-        pass
 
 
-class RelationshipExtractorBase(ABC):
+class RelationshipExtractorBase(ABC):  # pylint: disable=too-few-public-methods
     """Abstract base class for relationship extractors."""
 
     @abstractmethod
@@ -24,4 +23,3 @@ class RelationshipExtractorBase(ABC):
         self, chunks: list[Chunk], entities: list[Entity]
     ) -> list[Relationship]:
         """Extract relationships between entities."""
-        pass

@@ -75,12 +75,12 @@ class KnowledgeGraph(BaseModel):
         if relationship.target_id not in self.nodes:
             return None
         edge = GraphEdge.from_relationship(relationship)
-        self.edges.append(edge)
+        self.edges.append(edge)  # pylint: disable=no-member
         return edge
 
     def get_node_by_canonical_name(self, canonical_name: str) -> GraphNode | None:
         """Find a node by its canonical name."""
-        for node in self.nodes.values():
+        for node in self.nodes.values():  # pylint: disable=no-member
             if node.canonical_name == canonical_name.lower().strip():
                 return node
         return None

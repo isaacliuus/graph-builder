@@ -7,6 +7,7 @@ from graph_builder.models.document import Chunk
 from graph_builder.models.entity import Entity, EntityType
 from graph_builder.models.relationship import Relationship, RelationshipType
 from graph_builder.extraction.base import EntityExtractorBase, RelationshipExtractorBase
+from graph_builder.extraction.utils import group_entities_by_chunk
 
 
 class ExtractedEntity(BaseModel):
@@ -134,28 +135,28 @@ class LLMRelationshipExtractor(RelationshipExtractorBase):
     ) -> list[Relationship]:
         """Extract relationships using LLM."""
         relationships: list[Relationship] = []
-
-        # Build entity name to ID mapping
-        entity_name_to_id: dict[str, UUID] = {}
-        for entity in entities:
-            entity_name_to_id[entity.canonical_name] = entity.id
-
-        # Group entities by chunk
-        entities_by_chunk: dict[str, list[Entity]] = {}
-        for entity in entities:
-            if entity.chunk_id:
-                chunk_key = str(entity.chunk_id)
-                if chunk_key not in entities_by_chunk:
-                    entities_by_chunk[chunk_key] = []
-                entities_by_chunk[chunk_key].append(entity)
+        entity_name_to_id = {e.canonical_name: e.id for e in entities}
+        entities_by_chunk = group_entities_by_chunk(entities)
 
         for chunk in chunks:
             chunk_entities = entities_by_chunk.get(str(chunk.id), [])
             if len(chunk_entities) < 2:
                 continue
 
-            entity_names = [e.name for e in chunk_entities]
-            prompt = f"""Given the following text and list of entities, extract relationships between the entities.
+            extracted_rels = self._extract_from_chunk(chunk, chunk_entities)
+            for rel in self._convert_relationships(
+                extracted_rels, entity_name_to_id, chunk.id
+            ):
+                relationships.append(rel)
+
+        return relationships
+
+    def _extract_from_chunk(
+        self, chunk: Chunk, chunk_entities: list[Entity]
+    ) -> ExtractedRelationships:
+        """Extract relationships from a single chunk using LLM."""
+        entity_names = [e.name for e in chunk_entities]
+        prompt = f"""Given the following text and list of entities, extract relationships.
 
 Text:
 {chunk.content}
@@ -171,29 +172,32 @@ For each relationship, specify:
 
 Only extract relationships that are explicitly stated or strongly implied in the text."""
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                response_model=ExtractedRelationships,
-            )
+        return self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            response_model=ExtractedRelationships,
+        )
 
-            for extracted in response.relationships:
-                source_canonical = extracted.source_name.lower().strip()
-                target_canonical = extracted.target_name.lower().strip()
+    def _convert_relationships(
+        self,
+        extracted: ExtractedRelationships,
+        entity_name_to_id: dict[str, UUID],
+        chunk_id: UUID,
+    ) -> list[Relationship]:
+        """Convert extracted relationships to Relationship objects."""
+        relationships = []
+        for rel in extracted.relationships:
+            source_id = entity_name_to_id.get(rel.source_name.lower().strip())
+            target_id = entity_name_to_id.get(rel.target_name.lower().strip())
 
-                source_id = entity_name_to_id.get(source_canonical)
-                target_id = entity_name_to_id.get(target_canonical)
-
-                if source_id and target_id:
-                    relationship = Relationship(
-                        source_id=source_id,
-                        target_id=target_id,
-                        type=extracted.type,
-                        description=extracted.description,
-                        confidence=extracted.confidence,
-                        chunk_id=chunk.id,
-                        metadata={"extraction_method": "llm", "model": self.model},
-                    )
-                    relationships.append(relationship)
-
+            if source_id and target_id:
+                relationships.append(Relationship(
+                    source_id=source_id,
+                    target_id=target_id,
+                    type=rel.type,
+                    description=rel.description,
+                    confidence=rel.confidence,
+                    chunk_id=chunk_id,
+                    metadata={"extraction_method": "llm", "model": self.model},
+                ))
         return relationships

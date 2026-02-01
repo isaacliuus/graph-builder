@@ -22,47 +22,42 @@ class PipelineContext:
 
 
 @runtime_checkable
-class PipelineStage(Protocol):
+class PipelineStage(Protocol):  # pylint: disable=too-few-public-methods
     """Protocol for pipeline stages."""
 
     def process(self, context: PipelineContext) -> PipelineContext:
         """Process the context and return the updated context."""
-        ...
 
 
 @runtime_checkable
-class Chunker(Protocol):
+class Chunker(Protocol):  # pylint: disable=too-few-public-methods
     """Protocol for text chunkers."""
 
     def chunk(self, documents: list[Document]) -> list[Chunk]:
         """Split documents into chunks."""
-        ...
 
 
 @runtime_checkable
-class EntityExtractor(Protocol):
+class EntityExtractor(Protocol):  # pylint: disable=too-few-public-methods
     """Protocol for entity extractors."""
 
     def extract(self, chunks: list[Chunk]) -> list[Entity]:
         """Extract entities from chunks."""
-        ...
 
 
 @runtime_checkable
-class RelationshipExtractor(Protocol):
+class RelationshipExtractor(Protocol):  # pylint: disable=too-few-public-methods
     """Protocol for relationship extractors."""
 
     def extract(self, chunks: list[Chunk], entities: list[Entity]) -> list[Relationship]:
         """Extract relationships between entities."""
-        ...
 
 
 @runtime_checkable
-class GraphBuilder(Protocol):
+class GraphBuilder(Protocol):  # pylint: disable=too-few-public-methods
     """Protocol for graph builders."""
 
     def build(
         self, entities: list[Entity], relationships: list[Relationship]
     ) -> KnowledgeGraph:
         """Build a knowledge graph from entities and relationships."""
-        ...
