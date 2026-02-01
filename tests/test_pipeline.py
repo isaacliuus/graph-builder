@@ -118,6 +118,71 @@ class TestPipeline:
         assert len(context.entities) > 0
         assert context.graph is not None
 
+    def test_pipeline_run_syncs_to_graphdb(
+        self,
+        mock_chunker,
+        mock_entity_extractor,
+        mock_relationship_extractor,
+        mock_graph_builder,
+    ):
+        """Test that pipeline syncs graph to graphdb when configured."""
+        mock_graphdb = Mock()
+        pipeline = Pipeline(
+            chunker=mock_chunker,
+            entity_extractor=mock_entity_extractor,
+            relationship_extractor=mock_relationship_extractor,
+            graph_builder=mock_graph_builder,
+            graphdb=mock_graphdb,
+        )
+
+        docs = [Document(content="Test content")]
+        graph = pipeline.run(docs)
+
+        mock_graphdb.sync.assert_called_once_with(graph)
+
+    def test_pipeline_run_with_context_syncs_to_graphdb(
+        self,
+        mock_chunker,
+        mock_entity_extractor,
+        mock_relationship_extractor,
+        mock_graph_builder,
+    ):
+        """Test that run_with_context syncs graph to graphdb when configured."""
+        mock_graphdb = Mock()
+        pipeline = Pipeline(
+            chunker=mock_chunker,
+            entity_extractor=mock_entity_extractor,
+            relationship_extractor=mock_relationship_extractor,
+            graph_builder=mock_graph_builder,
+            graphdb=mock_graphdb,
+        )
+
+        docs = [Document(content="Test content")]
+        context = pipeline.run_with_context(docs)
+
+        mock_graphdb.sync.assert_called_once_with(context.graph)
+
+    def test_pipeline_without_graphdb_does_not_fail(
+        self,
+        mock_chunker,
+        mock_entity_extractor,
+        mock_relationship_extractor,
+        mock_graph_builder,
+    ):
+        """Test that pipeline works without graphdb configured."""
+        pipeline = Pipeline(
+            chunker=mock_chunker,
+            entity_extractor=mock_entity_extractor,
+            relationship_extractor=mock_relationship_extractor,
+            graph_builder=mock_graph_builder,
+            graphdb=None,
+        )
+
+        docs = [Document(content="Test content")]
+        graph = pipeline.run(docs)
+
+        assert isinstance(graph, KnowledgeGraph)
+
 
 class TestPipelineBuilder:
     def test_builder_creation(self):
@@ -158,6 +223,26 @@ class TestPipelineBuilder:
         )
 
         assert isinstance(pipeline, Pipeline)
+
+    def test_builder_with_graphdb(self):
+        chunker = Mock()
+        entity_ext = Mock()
+        rel_ext = Mock()
+        graph_builder = Mock()
+        graphdb = Mock()
+
+        pipeline = (
+            PipelineBuilder()
+            .with_chunker(chunker)
+            .with_entity_extractor(entity_ext)
+            .with_relationship_extractor(rel_ext)
+            .with_graph_builder(graph_builder)
+            .with_graphdb(graphdb)
+            .build()
+        )
+
+        assert isinstance(pipeline, Pipeline)
+        assert pipeline.graphdb is graphdb
 
     def test_default_pipeline(self):
         pipeline = PipelineBuilder.default()

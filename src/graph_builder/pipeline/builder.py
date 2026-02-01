@@ -5,6 +5,7 @@ from graph_builder.pipeline.base import (
     EntityExtractor,
     RelationshipExtractor,
     GraphBuilder,
+    GraphDB,
 )
 from graph_builder.pipeline.pipeline import Pipeline
 
@@ -17,6 +18,7 @@ class PipelineBuilder:
         self._entity_extractor: EntityExtractor | None = None
         self._relationship_extractor: RelationshipExtractor | None = None
         self._graph_builder: GraphBuilder | None = None
+        self._graphdb: GraphDB | None = None
 
     def with_chunker(self, chunker: Chunker) -> "PipelineBuilder":
         """Set the chunker for the pipeline."""
@@ -40,6 +42,11 @@ class PipelineBuilder:
         self._graph_builder = builder
         return self
 
+    def with_graphdb(self, graphdb: GraphDB) -> "PipelineBuilder":
+        """Set the graph database for persisting the built graph."""
+        self._graphdb = graphdb
+        return self
+
     def build(self) -> Pipeline:
         """Build the pipeline with the configured components."""
         if self._chunker is None:
@@ -56,6 +63,7 @@ class PipelineBuilder:
             entity_extractor=self._entity_extractor,
             relationship_extractor=self._relationship_extractor,
             graph_builder=self._graph_builder,
+            graphdb=self._graphdb,
         )
 
     @classmethod
