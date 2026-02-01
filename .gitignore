@@ -54,3 +54,4 @@ htmlcov/
 c-session-*.txt
 .cursor/
 data
+.claude/rules/
