@@ -30,6 +30,15 @@ class Settings(BaseSettings):
     # Graph settings
     deduplicate_entities: bool = True
 
+    # Memgraph settings
+    memgraph_host: str = "localhost"
+    memgraph_port: int = 7687
+    memgraph_username: str = ""
+    memgraph_password: str = ""
+    memgraph_database: str = "memgraph"
+    memgraph_encrypted: bool = False
+    use_graphdb: bool = False
+
 
 def get_settings() -> Settings:
     """Get application settings."""
