@@ -53,3 +53,4 @@ htmlcov/
 
 c-session-*.txt
 .cursor/
+data
