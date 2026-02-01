@@ -11,6 +11,7 @@ dependencies = [
     "spacy>=3.7",
     "networkx>=3.0",
     "rich>=13.0",
+    "pylint>=4.0.4",
 ]
 
 [project.optional-dependencies]
