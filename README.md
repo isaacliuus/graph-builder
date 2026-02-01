@@ -37,11 +37,36 @@ uv pip install en-core-web-sm@https://github.com/explosion/spacy-models/releases
 ### CLI
 
 ```bash
-# Run with sample text
+# Run with sample text (uses spaCy by default)
 uv run python main.py
 
 # Run with a file
 uv run python main.py your_text_file.txt
+```
+
+### Using the LLM Extractor
+
+The LLM extractor provides higher quality extraction than spaCy but requires an OpenAI API key.
+
+**Via environment variables:**
+```bash
+# Set variables and run
+GRAPH_BUILDER_USE_LLM=true GRAPH_BUILDER_OPENAI_API_KEY=sk-... uv run python main.py
+
+# Or export them
+export GRAPH_BUILDER_USE_LLM=true
+export GRAPH_BUILDER_OPENAI_API_KEY=sk-...
+uv run python main.py
+```
+
+**Via .env file:**
+```bash
+# Create .env file
+echo "GRAPH_BUILDER_USE_LLM=true" >> .env
+echo "GRAPH_BUILDER_OPENAI_API_KEY=sk-..." >> .env
+
+# Run (pydantic-settings loads .env automatically)
+uv run python main.py
 ```
 
 ### Python API
@@ -51,20 +76,22 @@ from graph_builder import Document, PipelineBuilder
 
 docs = [Document(content="Apple was founded by Steve Jobs.")]
 
-# Default (spaCy-based)
+# Default (spaCy-based) - fast and free
 pipeline = PipelineBuilder.default()
 graph = pipeline.run(docs)
 
-# LLM-based (requires openai + instructor)
-pipeline = PipelineBuilder.with_llm(api_key="sk-...")
+# LLM-based - higher quality extraction
+pipeline = PipelineBuilder.with_llm(api_key="sk-...", model="gpt-4o-mini")
 graph = pipeline.run(docs)
 ```
 
 ## Environment Variables
 
-- `GRAPH_BUILDER_USE_LLM` - Enable LLM extraction (default: false)
-- `GRAPH_BUILDER_OPENAI_API_KEY` - OpenAI API key
-- `GRAPH_BUILDER_LLM_MODEL` - LLM model (default: gpt-4o-mini)
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GRAPH_BUILDER_USE_LLM` | Enable LLM extraction | `false` |
+| `GRAPH_BUILDER_OPENAI_API_KEY` | OpenAI API key | (required for LLM) |
+| `GRAPH_BUILDER_LLM_MODEL` | Model to use | `gpt-4o-mini` |
 
 ## Architecture
 
