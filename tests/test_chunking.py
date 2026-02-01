@@ -64,6 +64,7 @@ class TestRecursiveChunker:
 
         assert len(chunks) == 0
 
+    #TODO: this does not work, add a test for the custom separators
     def test_chunk_with_custom_separators(self):
         chunker = RecursiveChunker(
             chunk_size=50,
