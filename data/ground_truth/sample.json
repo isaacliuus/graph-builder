@@ -1,0 +1,49 @@
+{
+  "documents": [
+    {
+      "id": "doc1",
+      "content": "Apple Inc. was founded by Steve Jobs in Cupertino.",
+      "entities": [
+        {"name": "Apple Inc.", "type": "ORG"},
+        {"name": "Steve Jobs", "type": "PERSON"},
+        {"name": "Cupertino", "type": "LOC"}
+      ],
+      "relationships": [
+        {"source": "Steve Jobs", "target": "Apple Inc.", "type": "FOUNDED"},
+        {"source": "Apple Inc.", "target": "Cupertino", "type": "LOCATED_IN"}
+      ]
+    },
+    {
+      "id": "doc2",
+      "content": "Microsoft was founded by Bill Gates and Paul Allen in Albuquerque, New Mexico.",
+      "entities": [
+        {"name": "Microsoft", "type": "ORG"},
+        {"name": "Bill Gates", "type": "PERSON"},
+        {"name": "Paul Allen", "type": "PERSON"},
+        {"name": "Albuquerque", "type": "LOC"},
+        {"name": "New Mexico", "type": "LOC"}
+      ],
+      "relationships": [
+        {"source": "Bill Gates", "target": "Microsoft", "type": "FOUNDED"},
+        {"source": "Paul Allen", "target": "Microsoft", "type": "FOUNDED"},
+        {"source": "Microsoft", "target": "Albuquerque", "type": "LOCATED_IN"}
+      ]
+    },
+    {
+      "id": "doc3",
+      "content": "Elon Musk is the CEO of Tesla and SpaceX. Tesla is headquartered in Austin, Texas.",
+      "entities": [
+        {"name": "Elon Musk", "type": "PERSON"},
+        {"name": "Tesla", "type": "ORG"},
+        {"name": "SpaceX", "type": "ORG"},
+        {"name": "Austin", "type": "LOC"},
+        {"name": "Texas", "type": "LOC"}
+      ],
+      "relationships": [
+        {"source": "Elon Musk", "target": "Tesla", "type": "WORKS_FOR"},
+        {"source": "Elon Musk", "target": "SpaceX", "type": "WORKS_FOR"},
+        {"source": "Tesla", "target": "Austin", "type": "LOCATED_IN"}
+      ]
+    }
+  ]
+}

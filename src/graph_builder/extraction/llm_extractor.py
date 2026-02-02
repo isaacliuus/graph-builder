@@ -169,6 +169,7 @@ For each relationship, specify:
 - type: One of WORKS_FOR, LOCATED_IN, FOUNDED, ACQUIRED, PARTNER_OF, SUBSIDIARY_OF, MEMBER_OF, CREATED, RELATED_TO, OTHER
 - description: A brief description of the relationship
 - confidence: How confident you are (0.0 to 1.0)
+- please pay attention to the passive verb, since people are usually the subject of the relationship when the other side is an organization or location.
 
 Only extract relationships that are explicitly stated or strongly implied in the text."""
 
