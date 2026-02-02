@@ -77,7 +77,17 @@ def main():
         Tim Cook became the CEO of Apple in 2011 after Steve Jobs resigned due to health issues.
         Apple acquired Beats Electronics in 2014 for $3 billion.
         """
-        documents = [Document(content=sample_text, source="sample")]
+        sample_text_2 = """
+        Microsoft is a global technology giant founded in 1975 by Bill Gates and Paul Allen, renowned for its Windows operating systems, Office productivity suite, Azure cloud platform, and diverse innovations across software, hardware, and AI that shape personal computing, enterprise technology, and digital transformation worldwide.
+        """
+        sample_text_3 = """
+        Elon Musk is the CEO of Tesla and SpaceX. Tesla is headquartered in Austin, Texas.
+        """
+        documents = [
+            Document(content=sample_text, source="sample"),
+            Document(content=sample_text_2, source="sample_2"),
+            Document(content=sample_text_3, source="sample_3"),
+        ]
     else:
         file_path = Path(sys.argv[1])
         if not file_path.exists():
