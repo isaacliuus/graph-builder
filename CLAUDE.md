@@ -23,6 +23,7 @@ Each module has its own CLAUDE.md with specific conventions:
 - `src/graph_builder/chunking/CLAUDE.md` - Chunking implementation
 - `src/graph_builder/extraction/CLAUDE.md` - Extraction strategies
 - `src/graph_builder/graph/CLAUDE.md` - Graph building rules
+- `src/graph_builder/evaluation/CLAUDE.md` - Evaluation metrics and datasets
 - `src/graph_builder/config/CLAUDE.md` - Configuration settings
 
 ### Testing

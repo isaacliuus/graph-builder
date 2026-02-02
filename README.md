@@ -13,6 +13,7 @@ src/graph_builder/
 ├── chunking/     # Text chunking (RecursiveCharacterTextSplitter)
 ├── extraction/   # Entity & relationship extraction (spaCy, LLM)
 ├── graph/        # Graph building (NetworkX)
+├── evaluation/   # Extraction quality metrics (precision, recall, F1)
 └── config/       # Pydantic settings
 ```
 
@@ -100,6 +101,44 @@ The pipeline has 4 stages:
 2. **Entity Extraction** - Extract named entities (PERSON, ORG, LOC, etc.)
 3. **Relationship Extraction** - Find relationships between entities
 4. **Graph Building** - Build KnowledgeGraph with deduplication
+
+## Evaluation
+
+Measure extraction quality against ground truth datasets using precision, recall, and F1 metrics.
+
+```bash
+# Run evaluation with spaCy (default)
+uv run python scripts/run_evaluation.py data/ground_truth/sample.json
+
+# Run with LLM extractor
+uv run python scripts/run_evaluation.py data/ground_truth/sample.json --extractor llm
+
+# Export debug info to tmp/ folder
+uv run python scripts/run_evaluation.py data/ground_truth/sample.json --debug
+
+# Save results to JSON
+uv run python scripts/run_evaluation.py data/ground_truth/sample.json --output results.json
+```
+
+### Ground Truth Format
+
+```json
+{
+  "documents": [
+    {
+      "id": "doc1",
+      "content": "Apple Inc. was founded by Steve Jobs.",
+      "entities": [
+        {"name": "Apple Inc.", "type": "ORG"},
+        {"name": "Steve Jobs", "type": "PERSON"}
+      ],
+      "relationships": [
+        {"source": "Steve Jobs", "target": "Apple Inc.", "type": "FOUNDED"}
+      ]
+    }
+  ]
+}
+```
 
 ## Testing
 
