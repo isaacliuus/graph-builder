@@ -33,7 +33,7 @@ def normalize_entity_type(type_str: str) -> EntityType:
 
 
 @dataclass
-class DocumentResult:
+class DocumentResult:  # pylint: disable=too-many-instance-attributes
     """Evaluation results for a single document."""
 
     document_id: str
@@ -43,6 +43,11 @@ class DocumentResult:
     relationship_tp: int = 0
     relationship_fp: int = 0
     relationship_fn: int = 0
+    # Debug fields for extracted data
+    extracted_entities: list = field(default_factory=list)
+    extracted_relationships: list = field(default_factory=list)
+    ground_truth_entities: list = field(default_factory=list)
+    ground_truth_relationships: list = field(default_factory=list)
 
 
 @dataclass
@@ -57,28 +62,40 @@ class EvaluationResult:
     relationship_f1: float
     details: dict[str, DocumentResult] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
-        """Convert results to a dictionary."""
-        return {
+    def to_dict(self, include_debug: bool = False) -> dict:
+        """Convert results to a dictionary.
+
+        Args:
+            include_debug: If True, include extracted entities/relationships.
+        """
+        result = {
             "entity_precision": self.entity_precision,
             "entity_recall": self.entity_recall,
             "entity_f1": self.entity_f1,
             "relationship_precision": self.relationship_precision,
             "relationship_recall": self.relationship_recall,
             "relationship_f1": self.relationship_f1,
-            "details": {
-                doc_id: {
-                    "document_id": result.document_id,
-                    "entity_tp": result.entity_tp,
-                    "entity_fp": result.entity_fp,
-                    "entity_fn": result.entity_fn,
-                    "relationship_tp": result.relationship_tp,
-                    "relationship_fp": result.relationship_fp,
-                    "relationship_fn": result.relationship_fn,
-                }
-                for doc_id, result in self.details.items()
-            },
+            "details": {},
         }
+
+        for doc_id, doc_result in self.details.items():
+            doc_dict = {
+                "document_id": doc_result.document_id,
+                "entity_tp": doc_result.entity_tp,
+                "entity_fp": doc_result.entity_fp,
+                "entity_fn": doc_result.entity_fn,
+                "relationship_tp": doc_result.relationship_tp,
+                "relationship_fp": doc_result.relationship_fp,
+                "relationship_fn": doc_result.relationship_fn,
+            }
+            if include_debug:
+                doc_dict["extracted_entities"] = doc_result.extracted_entities
+                doc_dict["extracted_relationships"] = doc_result.extracted_relationships
+                doc_dict["ground_truth_entities"] = doc_result.ground_truth_entities
+                doc_dict["ground_truth_relationships"] = doc_result.ground_truth_relationships
+            result["details"][doc_id] = doc_dict
+
+        return result
 
 
 class Evaluator:  # pylint: disable=too-few-public-methods
@@ -146,7 +163,9 @@ class Evaluator:  # pylint: disable=too-few-public-methods
             details=details,
         )
 
-    def _evaluate_document(self, gt_doc: GroundTruthDocument) -> DocumentResult:
+    def _evaluate_document(  # pylint: disable=too-many-locals
+        self, gt_doc: GroundTruthDocument
+    ) -> DocumentResult:
         """Evaluate extractors on a single document."""
         doc_id = uuid4()
         chunk = Chunk(
@@ -174,6 +193,11 @@ class Evaluator:  # pylint: disable=too-few-public-methods
             extracted_relationships, gt_doc.relationships, entity_map
         )
 
+        # Build id_to_name map for relationship debug output
+        id_to_name: dict[str, str] = {}
+        for name, entity in entity_map.items():
+            id_to_name[str(entity.id)] = name
+
         return DocumentResult(
             document_id=gt_doc.id,
             entity_tp=entity_tp,
@@ -182,6 +206,26 @@ class Evaluator:  # pylint: disable=too-few-public-methods
             relationship_tp=rel_tp,
             relationship_fp=rel_fp,
             relationship_fn=rel_fn,
+            extracted_entities=[
+                {"name": e.name, "type": e.type.value, "confidence": e.confidence}
+                for e in extracted_entities
+            ],
+            extracted_relationships=[
+                {
+                    "source": id_to_name.get(str(r.source_id), "unknown"),
+                    "target": id_to_name.get(str(r.target_id), "unknown"),
+                    "type": r.type.value,
+                    "confidence": r.confidence,
+                }
+                for r in extracted_relationships
+            ],
+            ground_truth_entities=[
+                {"name": e.name, "type": e.type} for e in gt_doc.entities
+            ],
+            ground_truth_relationships=[
+                {"source": r.source, "target": r.target, "type": r.type}
+                for r in gt_doc.relationships
+            ],
         )
 
     def _match_entities(
