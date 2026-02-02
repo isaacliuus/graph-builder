@@ -13,6 +13,7 @@ src/graph_builder/
 ├── chunking/     # Text chunking (RecursiveCharacterTextSplitter)
 ├── extraction/   # Entity & relationship extraction (spaCy, LLM)
 ├── graph/        # Graph building (NetworkX)
+├── graphdb/      # Graph database persistence (Memgraph)
 ├── evaluation/   # Extraction quality metrics (precision, recall, F1)
 └── config/       # Pydantic settings
 ```
@@ -25,6 +26,9 @@ uv sync
 
 # Install with LLM support
 uv sync --extra llm
+
+# Install with Memgraph support
+uv sync --extra memgraph
 
 # Install with dev dependencies (pytest)
 uv sync --extra dev
@@ -86,6 +90,48 @@ pipeline = PipelineBuilder.with_llm(api_key="sk-...", model="gpt-4o-mini")
 graph = pipeline.run(docs)
 ```
 
+### Persisting to Memgraph
+
+The pipeline can automatically persist extracted graphs to a Memgraph database.
+
+```python
+from graph_builder import Document, PipelineBuilder
+from graph_builder.graphdb.memgraph import MemgraphGraphDB
+
+docs = [Document(content="Apple was founded by Steve Jobs.")]
+
+# Run pipeline and persist to Memgraph
+with MemgraphGraphDB(host="localhost", port=7687) as db:
+    pipeline = PipelineBuilder.default()
+    pipeline.graphdb = db
+    graph = pipeline.run(docs)  # Automatically syncs to Memgraph
+
+# Or use the builder API
+with MemgraphGraphDB(host="localhost", port=7687) as db:
+    from graph_builder.chunking.recursive import RecursiveChunker
+    from graph_builder.extraction.spacy_extractor import (
+        SpacyEntityExtractor,
+        SpacyRelationshipExtractor,
+    )
+    from graph_builder.graph.networkx_builder import NetworkXGraphBuilder
+
+    pipeline = (
+        PipelineBuilder()
+        .with_chunker(RecursiveChunker())
+        .with_entity_extractor(SpacyEntityExtractor())
+        .with_relationship_extractor(SpacyRelationshipExtractor())
+        .with_graph_builder(NetworkXGraphBuilder())
+        .with_graphdb(db)
+        .build()
+    )
+    graph = pipeline.run(docs)
+
+# Standalone usage (without pipeline)
+with MemgraphGraphDB(host="localhost", port=7687) as db:
+    db.sync(graph)  # Persist an existing graph
+    loaded = db.load_graph()  # Load graph from database
+```
+
 ## Environment Variables
 
 | Variable | Description | Default |
@@ -93,14 +139,21 @@ graph = pipeline.run(docs)
 | `GRAPH_BUILDER_USE_LLM` | Enable LLM extraction | `false` |
 | `GRAPH_BUILDER_OPENAI_API_KEY` | OpenAI API key | (required for LLM) |
 | `GRAPH_BUILDER_LLM_MODEL` | Model to use | `gpt-4o-mini` |
+| `GRAPH_BUILDER_MEMGRAPH_HOST` | Memgraph server hostname | `localhost` |
+| `GRAPH_BUILDER_MEMGRAPH_PORT` | Memgraph Bolt port | `7687` |
+| `GRAPH_BUILDER_MEMGRAPH_USERNAME` | Memgraph username | (empty) |
+| `GRAPH_BUILDER_MEMGRAPH_PASSWORD` | Memgraph password | (empty) |
+| `GRAPH_BUILDER_MEMGRAPH_DATABASE` | Memgraph database name | `memgraph` |
+| `GRAPH_BUILDER_USE_GRAPHDB` | Enable graph database persistence | `false` |
 
 ## Architecture
 
-The pipeline has 4 stages:
+The pipeline has 5 stages:
 1. **Chunking** - Split documents into chunks
 2. **Entity Extraction** - Extract named entities (PERSON, ORG, LOC, etc.)
 3. **Relationship Extraction** - Find relationships between entities
 4. **Graph Building** - Build KnowledgeGraph with deduplication
+5. **Persistence** (optional) - Sync graph to database (Memgraph)
 
 ## Evaluation
 

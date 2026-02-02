@@ -2,11 +2,12 @@
 
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
+from uuid import UUID
 
 from graph_builder.models.document import Document, Chunk
 from graph_builder.models.entity import Entity
-from graph_builder.models.relationship import Relationship
-from graph_builder.models.graph import KnowledgeGraph
+from graph_builder.models.relationship import Relationship, RelationshipType
+from graph_builder.models.graph import KnowledgeGraph, GraphNode, GraphEdge
 
 
 @dataclass
@@ -61,3 +62,59 @@ class GraphBuilder(Protocol):  # pylint: disable=too-few-public-methods
         self, entities: list[Entity], relationships: list[Relationship]
     ) -> KnowledgeGraph:
         """Build a knowledge graph from entities and relationships."""
+
+
+@runtime_checkable
+class GraphDB(Protocol):
+    """Protocol for graph database implementations."""
+
+    def connect(self) -> None:
+        """Establish connection to the database."""
+
+    def close(self) -> None:
+        """Close the database connection."""
+
+    def sync(self, graph: KnowledgeGraph) -> None:
+        """Synchronize a KnowledgeGraph to the database."""
+
+    def create_node(self, node: GraphNode) -> GraphNode:
+        """Create a node in the database."""
+
+    def get_node(self, node_id: UUID) -> GraphNode | None:
+        """Get a node by its ID."""
+
+    def get_node_by_canonical_name(self, canonical_name: str) -> GraphNode | None:
+        """Get a node by its canonical name."""
+
+    def update_node(self, node: GraphNode) -> GraphNode:
+        """Update an existing node."""
+
+    def delete_node(self, node_id: UUID) -> bool:
+        """Delete a node by its ID."""
+
+    def create_edge(self, edge: GraphEdge) -> GraphEdge:
+        """Create an edge in the database."""
+
+    def get_edges(
+        self,
+        source_id: UUID | None = None,
+        target_id: UUID | None = None,
+    ) -> list[GraphEdge]:
+        """Get edges, optionally filtered by source and/or target."""
+
+    def delete_edge(
+        self,
+        source_id: UUID,
+        target_id: UUID,
+        edge_type: RelationshipType | None = None,
+    ) -> bool:
+        """Delete an edge between two nodes."""
+
+    def create_nodes_batch(self, nodes: list[GraphNode]) -> list[GraphNode]:
+        """Create multiple nodes in a single batch operation."""
+
+    def create_edges_batch(self, edges: list[GraphEdge]) -> list[GraphEdge]:
+        """Create multiple edges in a single batch operation."""
+
+    def load_graph(self) -> KnowledgeGraph:
+        """Load all nodes and edges from the database."""
