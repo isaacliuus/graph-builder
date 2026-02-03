@@ -6,10 +6,12 @@ Usage:
     uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json
     uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --output results.json
     uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --debug
+    uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --extractor llm --api-key sk-...
 """
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -84,6 +86,21 @@ def main() -> None:
         type=Path,
         help="Base path for resolving document file paths (default: dataset directory)",
     )
+    parser.add_argument(
+        "--extractor",
+        choices=["pattern", "llm"],
+        default="pattern",
+        help="Extractor to use: pattern (default) or llm",
+    )
+    parser.add_argument(
+        "--api-key",
+        help="OpenAI API key (for LLM extractor, can also use OPENAI_API_KEY env var)",
+    )
+    parser.add_argument(
+        "--model",
+        default="gpt-4o-mini",
+        help="LLM model to use (default: gpt-4o-mini)",
+    )
 
     args = parser.parse_args()
 
@@ -110,7 +127,26 @@ def main() -> None:
         print(f"Error: {e}")
         sys.exit(1)
 
-    extractor = PatternClauseExtractor()
+    # Create extractor
+    if args.extractor == "pattern":
+        print("Using pattern-based extractor...")
+        extractor = PatternClauseExtractor()
+    else:
+        # LLM extractor
+        api_key = args.api_key or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            print("Error: OpenAI API key required for LLM extractor.")
+            print("Set OPENAI_API_KEY environment variable or use --api-key")
+            sys.exit(1)
+
+        print(f"Using LLM extractor (model: {args.model})...")
+        try:
+            from graph_builder.clauses import LLMClauseExtractor
+            extractor = LLMClauseExtractor(api_key=api_key, model=args.model)
+        except ImportError as e:
+            print(f"Error: {e}")
+            print("Install LLM dependencies with: uv sync --extra llm")
+            sys.exit(1)
 
     # Run evaluation
     print("Running evaluation...")

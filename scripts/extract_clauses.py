@@ -5,10 +5,12 @@ Usage:
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx --output clauses.json
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx --format table
+    uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx --extractor llm --api-key sk-...
 """
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -100,6 +102,21 @@ def main() -> None:
         default=50,
         help="Minimum clause length in characters (default: 50)",
     )
+    parser.add_argument(
+        "--extractor",
+        choices=["pattern", "llm"],
+        default="pattern",
+        help="Extractor to use: pattern (default) or llm",
+    )
+    parser.add_argument(
+        "--api-key",
+        help="OpenAI API key (for LLM extractor, can also use OPENAI_API_KEY env var)",
+    )
+    parser.add_argument(
+        "--model",
+        default="gpt-4o-mini",
+        help="LLM model to use (default: gpt-4o-mini)",
+    )
 
     args = parser.parse_args()
 
@@ -123,8 +140,28 @@ def main() -> None:
 
     print(f"Document has {document.metadata.get('paragraph_count', 0)} paragraphs")
 
+    # Create extractor
+    if args.extractor == "pattern":
+        print("Using pattern-based extractor...")
+        extractor = PatternClauseExtractor(min_clause_length=args.min_length)
+    else:
+        # LLM extractor
+        api_key = args.api_key or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            print("Error: OpenAI API key required for LLM extractor.")
+            print("Set OPENAI_API_KEY environment variable or use --api-key")
+            sys.exit(1)
+
+        print(f"Using LLM extractor (model: {args.model})...")
+        try:
+            from graph_builder.clauses import LLMClauseExtractor
+            extractor = LLMClauseExtractor(api_key=api_key, model=args.model)
+        except ImportError as e:
+            print(f"Error: {e}")
+            print("Install LLM dependencies with: uv sync --extra llm")
+            sys.exit(1)
+
     # Extract clauses
-    extractor = PatternClauseExtractor(min_clause_length=args.min_length)
     clauses = extractor.extract(document)
 
     print(f"Extracted {len(clauses)} clauses")

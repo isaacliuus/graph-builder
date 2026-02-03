@@ -6,6 +6,7 @@ Clause extraction from legal contracts and documents.
 
 - `base.py` - `ClauseExtractor` Protocol defining the extractor interface
 - `pattern_extractor.py` - Rule-based clause extraction using keyword matching
+- `llm_extractor.py` - LLM-based clause extraction using OpenAI + instructor (optional dependency)
 
 ## Protocol
 
@@ -52,3 +53,33 @@ for clause in clauses:
 ### Fallback Behavior
 
 If the document lacks paragraph metadata (not parsed by DocxParser), the extractor falls back to plain text extraction using regex-based section detection.
+
+## LLMClauseExtractor
+
+LLM-based clause extractor that uses OpenAI's API with instructor for structured output.
+
+### Usage
+
+```python
+from graph_builder.parsing import DocxParser
+from graph_builder.clauses import LLMClauseExtractor
+
+parser = DocxParser()
+doc = parser.parse(Path("contract.docx"))
+
+extractor = LLMClauseExtractor(api_key="sk-...", model="gpt-4o-mini")
+clauses = extractor.extract(doc)
+
+for clause in clauses:
+    print(f"{clause.type.value}: {clause.location.section_title}")
+    print(f"Confidence: {clause.confidence}")
+```
+
+### Features
+
+- Uses instructor for structured output
+- Lazy-loads OpenAI client to avoid import errors
+- Automatically finds clause locations in parsed documents
+- Supports bilingual content (English/Chinese)
+- Higher accuracy than pattern-based extraction
+- Requires `llm` extra: `uv sync --extra llm`

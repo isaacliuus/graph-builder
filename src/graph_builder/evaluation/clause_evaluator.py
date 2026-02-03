@@ -310,7 +310,7 @@ class ClauseEvaluator:
                 if j in matched_gt:
                     continue
                 gt_title = (gt.title or "").lower().strip()
-                if gt_title and ext_title == gt_title:
+                if gt_title and ext_title in gt_title:
                     matched_gt.add(j)
                     matched_extracted.add(i)
                     matches.append((ext, gt))

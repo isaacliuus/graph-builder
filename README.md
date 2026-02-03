@@ -100,8 +100,11 @@ graph = pipeline.run(docs)
 Extract clauses from .docx contract files with type classification and location tracking.
 
 ```bash
-# Extract clauses from a contract file
+# Extract clauses from a contract file (pattern-based, default)
 uv run python scripts/extract_clauses.py data/test_contracts/contract.docx
+
+# Use LLM for higher quality extraction
+uv run python scripts/extract_clauses.py contract.docx --extractor llm --api-key sk-...
 
 # Table format (summary)
 uv run python scripts/extract_clauses.py contract.docx --format table
@@ -110,7 +113,7 @@ uv run python scripts/extract_clauses.py contract.docx --format table
 uv run python scripts/extract_clauses.py contract.docx --output clauses.json
 ```
 
-**Python API:**
+**Python API (Pattern-based):**
 
 ```python
 from pathlib import Path
@@ -127,6 +130,26 @@ clauses = extractor.extract(doc)
 
 for clause in clauses:
     print(f"{clause.type.value}: {clause.location.section_title}")
+```
+
+**Python API (LLM-based):**
+
+```python
+from pathlib import Path
+from graph_builder.parsing import DocxParser
+from graph_builder.clauses import LLMClauseExtractor
+
+# Parse the document
+parser = DocxParser()
+doc = parser.parse(Path("contract.docx"))
+
+# Extract clauses with LLM (higher quality)
+extractor = LLMClauseExtractor(api_key="sk-...", model="gpt-4o-mini")
+clauses = extractor.extract(doc)
+
+for clause in clauses:
+    print(f"{clause.type.value}: {clause.location.section_title}")
+    print(f"Confidence: {clause.confidence}")
 ```
 
 **Supported Clause Types:**
@@ -251,8 +274,11 @@ uv run python scripts/run_evaluation.py data/ground_truth/sample.json --output r
 Evaluate clause extraction quality with detection, type classification, and boundary metrics.
 
 ```bash
-# Run clause evaluation
+# Run clause evaluation (pattern-based, default)
 uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json
+
+# Use LLM extractor for evaluation
+uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --extractor llm --api-key sk-...
 
 # With debug output
 uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --debug
