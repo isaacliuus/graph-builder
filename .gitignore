@@ -54,6 +54,5 @@ htmlcov/
 c-session-*.txt
 .cursor/
 data/*
-!data/ground_truth/
 .claude/rules/
 tmp/

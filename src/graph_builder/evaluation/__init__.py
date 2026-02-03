@@ -12,6 +12,17 @@ from graph_builder.evaluation.evaluator import (
     Evaluator,
 )
 from graph_builder.evaluation.metrics import f1_score, precision, recall
+from graph_builder.evaluation.clause_dataset import (
+    GroundTruthClause,
+    GroundTruthContractDocument,
+    load_clause_dataset,
+)
+from graph_builder.evaluation.clause_evaluator import (
+    ClauseDocumentResult,
+    ClauseEvaluationResult,
+    ClauseEvaluator,
+    calculate_boundary_iou,
+)
 
 __all__ = [
     "GroundTruthDocument",
@@ -24,4 +35,11 @@ __all__ = [
     "precision",
     "recall",
     "f1_score",
+    "GroundTruthClause",
+    "GroundTruthContractDocument",
+    "load_clause_dataset",
+    "ClauseDocumentResult",
+    "ClauseEvaluationResult",
+    "ClauseEvaluator",
+    "calculate_boundary_iou",
 ]
