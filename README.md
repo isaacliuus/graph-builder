@@ -1,6 +1,6 @@
 # Graph Builder
 
-A modular knowledge graph pipeline that extracts entities and relationships from text. Supports both spaCy (fast/free) and LLM-based (higher quality) extraction.
+A modular knowledge graph pipeline that extracts entities and relationships from text, and clauses from legal contracts. Supports both spaCy (fast/free) and LLM-based (higher quality) extraction.
 
 **Requirements:** Python 3.11+
 
@@ -8,10 +8,12 @@ A modular knowledge graph pipeline that extracts entities and relationships from
 
 ```
 src/graph_builder/
-├── models/       # Pydantic data models (Document, Entity, Relationship, KnowledgeGraph)
+├── models/       # Pydantic data models (Document, Entity, Relationship, KnowledgeGraph, Clause)
 ├── pipeline/     # Pipeline orchestration and builder API
 ├── chunking/     # Text chunking (RecursiveCharacterTextSplitter)
 ├── extraction/   # Entity & relationship extraction (spaCy, LLM)
+├── parsing/      # Document parsing (.docx, .pdf)
+├── clauses/      # Clause extraction from legal contracts
 ├── graph/        # Graph building (NetworkX)
 ├── graphdb/      # Graph database persistence (Memgraph)
 ├── evaluation/   # Extraction quality metrics (precision, recall, F1)
@@ -29,6 +31,9 @@ uv sync --extra llm
 
 # Install with Memgraph support
 uv sync --extra memgraph
+
+# Install with contract parsing support (.docx)
+uv sync --extra contracts
 
 # Install with dev dependencies (pytest)
 uv sync --extra dev
@@ -89,6 +94,52 @@ graph = pipeline.run(docs)
 pipeline = PipelineBuilder.with_llm(api_key="sk-...", model="gpt-4o-mini")
 graph = pipeline.run(docs)
 ```
+
+### Clause Extraction from Legal Contracts
+
+Extract clauses from .docx contract files with type classification and location tracking.
+
+```bash
+# Extract clauses from a contract file
+uv run python scripts/extract_clauses.py data/test_contracts/contract.docx
+
+# Table format (summary)
+uv run python scripts/extract_clauses.py contract.docx --format table
+
+# Save to JSON
+uv run python scripts/extract_clauses.py contract.docx --output clauses.json
+```
+
+**Python API:**
+
+```python
+from pathlib import Path
+from graph_builder.parsing import DocxParser
+from graph_builder.clauses import PatternClauseExtractor
+
+# Parse the document
+parser = DocxParser()
+doc = parser.parse(Path("contract.docx"))
+
+# Extract clauses
+extractor = PatternClauseExtractor()
+clauses = extractor.extract(doc)
+
+for clause in clauses:
+    print(f"{clause.type.value}: {clause.location.section_title}")
+```
+
+**Supported Clause Types:**
+- DEFINITIONS, CONFIDENTIALITY, TERMINATION, INDEMNIFICATION
+- LIABILITY, GOVERNING_LAW, DISPUTE_RESOLUTION, FORCE_MAJEURE
+- PAYMENT, INTELLECTUAL_PROPERTY, WARRANTIES, REPRESENTATIONS
+- NOTICES, TERM_AND_TERMINATION, OTHER
+
+**Features:**
+- Bilingual support (English/Chinese keywords)
+- Section number and title detection
+- Character offset tracking
+- Confidence scores for classifications
 
 ### Persisting to Memgraph
 
@@ -157,6 +208,8 @@ The pipeline has 5 stages:
 
 ## Evaluation
 
+### Entity & Relationship Extraction
+
 Measure extraction quality against ground truth datasets using precision, recall, and F1 metrics.
 
 ```bash
@@ -173,7 +226,7 @@ uv run python scripts/run_evaluation.py data/ground_truth/sample.json --debug
 uv run python scripts/run_evaluation.py data/ground_truth/sample.json --output results.json
 ```
 
-### Ground Truth Format
+**Ground Truth Format:**
 
 ```json
 {
@@ -192,6 +245,48 @@ uv run python scripts/run_evaluation.py data/ground_truth/sample.json --output r
   ]
 }
 ```
+
+### Clause Extraction Evaluation
+
+Evaluate clause extraction quality with detection, type classification, and boundary metrics.
+
+```bash
+# Run clause evaluation
+uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json
+
+# With debug output
+uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --debug
+
+# Save results
+uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --output results.json
+```
+
+**Ground Truth Format:**
+
+```json
+{
+  "documents": [
+    {
+      "id": "contract1",
+      "file": "contract.docx",
+      "clauses": [
+        {
+          "type": "CONFIDENTIALITY",
+          "section_number": "2",
+          "title": "Confidential Information",
+          "start_paragraph": 4,
+          "end_paragraph": 8
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Metrics:**
+- Detection precision, recall, and F1 score
+- Type classification accuracy
+- Boundary IoU (Intersection over Union)
 
 ## Testing
 
