@@ -137,20 +137,37 @@ class ClauseEvaluator:
 
     def __init__(
         self,
-        parser: DocumentParser,
+        parser: DocumentParser | dict[str, DocumentParser],
         extractor: ClauseExtractor,
         base_path: Path | None = None,
     ):
         """Initialize the evaluator.
 
         Args:
-            parser: Document parser to use for loading files.
+            parser: Document parser to use for loading files. Can be a single
+                parser or a dict mapping file extensions (e.g., ".docx", ".pdf")
+                to their respective parsers.
             extractor: Clause extractor to evaluate.
             base_path: Base path for resolving relative file paths.
         """
-        self.parser = parser
+        self._parser = parser
+        self._parsers: dict[str, DocumentParser] | None = None
+        if isinstance(parser, dict):
+            self._parsers = parser
         self.extractor = extractor
         self.base_path = base_path or Path.cwd()
+
+    def _get_parser_for_file(self, file_path: Path) -> DocumentParser:
+        """Get the appropriate parser for a file based on its extension."""
+        if self._parsers is not None:
+            ext = file_path.suffix.lower()
+            if ext not in self._parsers:
+                raise ValueError(
+                    f"No parser registered for extension: {ext}. "
+                    f"Available: {list(self._parsers.keys())}"
+                )
+            return self._parsers[ext]
+        return self._parser  # type: ignore[return-value]
 
     def evaluate(
         self, dataset: list[GroundTruthContractDocument]
@@ -204,7 +221,8 @@ class ClauseEvaluator:
         file_path = self.base_path / gt_doc.file
 
         # Parse and extract
-        document = self.parser.parse(file_path)
+        parser = self._get_parser_for_file(file_path)
+        document = parser.parse(file_path)
         extracted_clauses = self.extractor.extract(document)
 
         # Match clauses

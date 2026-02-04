@@ -32,7 +32,7 @@ uv sync --extra llm
 # Install with Memgraph support
 uv sync --extra memgraph
 
-# Install with contract parsing support (.docx)
+# Install with contract parsing support (.docx, .pdf)
 uv sync --extra contracts
 
 # Install with dev dependencies (pytest)
@@ -97,11 +97,14 @@ graph = pipeline.run(docs)
 
 ### Clause Extraction from Legal Contracts
 
-Extract clauses from .docx contract files with type classification and location tracking.
+Extract clauses from contract files (.docx or .pdf) with type classification and location tracking.
 
 ```bash
 # Extract clauses from a contract file (pattern-based, default)
 uv run python scripts/extract_clauses.py data/test_contracts/contract.docx
+
+# Extract from PDF
+uv run python scripts/extract_clauses.py contract.pdf
 
 # Use LLM for higher quality extraction
 uv run python scripts/extract_clauses.py contract.docx --extractor llm --api-key sk-...
@@ -117,12 +120,16 @@ uv run python scripts/extract_clauses.py contract.docx --output clauses.json
 
 ```python
 from pathlib import Path
-from graph_builder.parsing import DocxParser
+from graph_builder.parsing import DocxParser, PdfParser
 from graph_builder.clauses import PatternClauseExtractor
 
-# Parse the document
+# Parse a .docx document
 parser = DocxParser()
 doc = parser.parse(Path("contract.docx"))
+
+# Or parse a .pdf document
+parser = PdfParser()
+doc = parser.parse(Path("contract.pdf"))
 
 # Extract clauses
 extractor = PatternClauseExtractor()
@@ -136,12 +143,12 @@ for clause in clauses:
 
 ```python
 from pathlib import Path
-from graph_builder.parsing import DocxParser
+from graph_builder.parsing import DocxParser, PdfParser
 from graph_builder.clauses import LLMClauseExtractor
 
-# Parse the document
-parser = DocxParser()
-doc = parser.parse(Path("contract.docx"))
+# Parse the document (works with both .docx and .pdf)
+parser = PdfParser()
+doc = parser.parse(Path("contract.pdf"))
 
 # Extract clauses with LLM (higher quality)
 extractor = LLMClauseExtractor(api_key="sk-...", model="gpt-4o-mini")
@@ -271,7 +278,7 @@ uv run python scripts/run_evaluation.py data/ground_truth/sample.json --output r
 
 ### Clause Extraction Evaluation
 
-Evaluate clause extraction quality with detection, type classification, and boundary metrics.
+Evaluate clause extraction quality with detection, type classification, and boundary metrics. Supports both .docx and .pdf contract files.
 
 ```bash
 # Run clause evaluation (pattern-based, default)
@@ -304,6 +311,11 @@ uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sampl
           "end_paragraph": 8
         }
       ]
+    },
+    {
+      "id": "contract2",
+      "file": "contract.pdf",
+      "clauses": [...]
     }
   ]
 }

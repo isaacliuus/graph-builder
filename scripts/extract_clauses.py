@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-"""Script to extract clauses from a .docx contract file.
+"""Script to extract clauses from a contract file (.docx or .pdf).
 
 Usage:
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx
+    uv run python scripts/extract_clauses.py contract.pdf
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx --output clauses.json
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx --format table
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx --extractor llm --api-key sk-...
@@ -18,8 +19,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # pylint: disable=wrong-import-position
-from graph_builder.parsing import DocxParser
+from graph_builder.parsing import DocxParser, PdfParser
 from graph_builder.clauses import PatternClauseExtractor
+
+SUPPORTED_EXTENSIONS = {".docx", ".pdf"}
 
 
 def print_clauses_table(clauses: list) -> None:
@@ -75,15 +78,28 @@ def clauses_to_dict(clauses: list) -> list[dict]:
     ]
 
 
+def get_parser_for_file(file_path: Path):
+    """Get the appropriate parser based on file extension."""
+    ext = file_path.suffix.lower()
+    if ext == ".docx":
+        return DocxParser()
+    elif ext == ".pdf":
+        return PdfParser()
+    else:
+        raise ValueError(
+            f"Unsupported file type: {ext}. Supported: {SUPPORTED_EXTENSIONS}"
+        )
+
+
 def main() -> None:
-    """Extract clauses from a .docx file."""
+    """Extract clauses from a contract file."""
     parser = argparse.ArgumentParser(
-        description="Extract clauses from a .docx contract file."
+        description="Extract clauses from a contract file (.docx or .pdf)."
     )
     parser.add_argument(
         "file",
         type=Path,
-        help="Path to the .docx file",
+        help="Path to the contract file (.docx or .pdf)",
     )
     parser.add_argument(
         "--output", "-o",
@@ -125,14 +141,15 @@ def main() -> None:
         print(f"Error: File not found: {args.file}")
         sys.exit(1)
 
-    if not args.file.suffix.lower() == ".docx":
-        print(f"Error: File must be a .docx file, got: {args.file.suffix}")
+    if args.file.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        print(f"Error: Unsupported file type: {args.file.suffix}")
+        print(f"Supported: {', '.join(sorted(SUPPORTED_EXTENSIONS))}")
         sys.exit(1)
 
     # Initialize parser and extractor
     print(f"Parsing: {args.file}")
     try:
-        doc_parser = DocxParser()
+        doc_parser = get_parser_for_file(args.file)
         document = doc_parser.parse(args.file)
     except ImportError as e:
         print(f"Error: {e}")

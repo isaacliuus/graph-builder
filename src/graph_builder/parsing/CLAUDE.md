@@ -6,6 +6,7 @@ Document parsing utilities for extracting text and structure from various file f
 
 - `base.py` - `DocumentParser` Protocol defining the parser interface
 - `docx_parser.py` - Microsoft Word .docx file parser using python-docx
+- `pdf_parser.py` - PDF file parser using PyMuPDF
 
 ## Protocol
 
@@ -23,13 +24,23 @@ class DocumentParser(Protocol):
 - Tracks character offsets for each paragraph
 - Stores structured data in `Document.metadata["paragraphs"]`
 
+## PdfParser Features
+
+- Extracts text blocks from PDF pages using PyMuPDF (fitz)
+- Detects headings via font size (relative to median) and bold flags
+- Detects section numbers via regex (same pattern as DocxParser)
+- Tracks character offsets for each paragraph
+- Stores structured data in same format as DocxParser
+
 ## Paragraph Metadata Format
+
+Both parsers produce the same metadata format:
 
 ```python
 {
     "index": 0,                    # Paragraph index in document
     "text": "1.1 Definitions",     # Paragraph text
-    "style": "Heading 1",          # Word style name
+    "style": "Heading 1",          # Style name ("Heading" or "Normal" for PDF)
     "is_heading": True,            # Whether it's a heading style
     "section_number": "1.1",       # Extracted section number (or None)
     "start_char": 0,               # Start character offset
@@ -39,7 +50,7 @@ class DocumentParser(Protocol):
 
 ## Lazy Loading
 
-The `python-docx` dependency is lazy-loaded to avoid import errors when the `contracts` extra is not installed.
+Both `python-docx` and `PyMuPDF` dependencies are lazy-loaded to avoid import errors when the `contracts` extra is not installed.
 
 ## Installation
 

@@ -2,6 +2,8 @@
 # pylint: disable=duplicate-code
 """Standalone script to run clause extraction evaluation.
 
+Supports both .docx and .pdf contract files.
+
 Usage:
     uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json
     uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --output results.json
@@ -25,7 +27,7 @@ from graph_builder.evaluation import (
     GroundTruthContractDocument,
     load_clause_dataset,
 )
-from graph_builder.parsing import DocxParser
+from graph_builder.parsing import DocxParser, PdfParser
 from graph_builder.clauses import PatternClauseExtractor
 
 
@@ -117,15 +119,31 @@ def main() -> None:
     # Determine base path for document files
     base_path = args.base_path or args.dataset.parent
 
-    # Create parser and extractor
-    print("Initializing parser and extractor...")
+    # Create parsers for supported file types
+    print("Initializing parsers and extractor...")
+    parsers = {}
+
+    # Initialize DocxParser
     try:
-        doc_parser = DocxParser()
-        # Test that python-docx is available
-        _ = doc_parser.docx
-    except ImportError as e:
-        print(f"Error: {e}")
+        docx_parser = DocxParser()
+        _ = docx_parser.docx  # Test that python-docx is available
+        parsers[".docx"] = docx_parser
+    except ImportError:
+        print("Warning: python-docx not available, .docx files will not be supported")
+
+    # Initialize PdfParser
+    try:
+        pdf_parser = PdfParser()
+        _ = pdf_parser.fitz  # Test that PyMuPDF is available
+        parsers[".pdf"] = pdf_parser
+    except ImportError:
+        print("Warning: PyMuPDF not available, .pdf files will not be supported")
+
+    if not parsers:
+        print("Error: No parsers available. Install dependencies with: uv sync --extra contracts")
         sys.exit(1)
+
+    print(f"Available parsers: {', '.join(parsers.keys())}")
 
     # Create extractor
     if args.extractor == "pattern":
@@ -150,7 +168,7 @@ def main() -> None:
 
     # Run evaluation
     print("Running evaluation...")
-    evaluator = ClauseEvaluator(doc_parser, extractor, base_path=base_path)
+    evaluator = ClauseEvaluator(parsers, extractor, base_path=base_path)
 
     try:
         result = evaluator.evaluate(dataset)
