@@ -9,6 +9,7 @@ Usage:
     uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --output results.json
     uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --debug
     uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --extractor llm --api-key sk-...
+    uv run python scripts/run_clause_evaluation.py data/ground_truth/contracts/sample.json --pdf-parser mineru
 """
 
 import argparse
@@ -103,6 +104,12 @@ def main() -> None:
         default="gpt-4o-mini",
         help="LLM model to use (default: gpt-4o-mini)",
     )
+    parser.add_argument(
+        "--pdf-parser",
+        choices=["pymupdf", "mineru"],
+        default="pymupdf",
+        help="PDF parser to use: pymupdf (default, fast) or mineru (high quality)",
+    )
 
     args = parser.parse_args()
 
@@ -131,13 +138,25 @@ def main() -> None:
     except ImportError:
         print("Warning: python-docx not available, .docx files will not be supported")
 
-    # Initialize PdfParser
-    try:
-        pdf_parser = PdfParser()
-        _ = pdf_parser.fitz  # Test that PyMuPDF is available
-        parsers[".pdf"] = pdf_parser
-    except ImportError:
-        print("Warning: PyMuPDF not available, .pdf files will not be supported")
+    # Initialize PDF parser based on selection
+    if args.pdf_parser == "mineru":
+        try:
+            from graph_builder.parsing import MineruPdfParser
+            pdf_parser = MineruPdfParser()
+            _ = pdf_parser.mineru  # Test that mineru is available
+            parsers[".pdf"] = pdf_parser
+            print("Using MinerU PDF parser (high quality)")
+        except ImportError:
+            print("Warning: MinerU not available, .pdf files will not be supported")
+            print("Install with: uv pip install -U 'mineru[all]'")
+    else:
+        try:
+            pdf_parser = PdfParser()
+            _ = pdf_parser.fitz  # Test that PyMuPDF is available
+            parsers[".pdf"] = pdf_parser
+            print("Using PyMuPDF PDF parser (fast)")
+        except ImportError:
+            print("Warning: PyMuPDF not available, .pdf files will not be supported")
 
     if not parsers:
         print("Error: No parsers available. Install dependencies with: uv sync --extra contracts")

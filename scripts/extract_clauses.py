@@ -4,6 +4,7 @@
 Usage:
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx
     uv run python scripts/extract_clauses.py contract.pdf
+    uv run python scripts/extract_clauses.py contract.pdf --pdf-parser mineru
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx --output clauses.json
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx --format table
     uv run python scripts/extract_clauses.py data/test_contracts/simple2.docx --extractor llm --api-key sk-...
@@ -23,6 +24,7 @@ from graph_builder.parsing import DocxParser, PdfParser
 from graph_builder.clauses import PatternClauseExtractor
 
 SUPPORTED_EXTENSIONS = {".docx", ".pdf"}
+PDF_PARSERS = {"pymupdf", "mineru"}
 
 
 def print_clauses_table(clauses: list) -> None:
@@ -78,13 +80,22 @@ def clauses_to_dict(clauses: list) -> list[dict]:
     ]
 
 
-def get_parser_for_file(file_path: Path):
-    """Get the appropriate parser based on file extension."""
+def get_parser_for_file(file_path: Path, pdf_parser: str = "pymupdf"):
+    """Get the appropriate parser based on file extension.
+
+    Args:
+        file_path: Path to the file.
+        pdf_parser: PDF parser to use - "pymupdf" (default) or "mineru".
+    """
     ext = file_path.suffix.lower()
     if ext == ".docx":
         return DocxParser()
     elif ext == ".pdf":
-        return PdfParser()
+        if pdf_parser == "mineru":
+            from graph_builder.parsing import MineruPdfParser
+            return MineruPdfParser()
+        else:
+            return PdfParser()
     else:
         raise ValueError(
             f"Unsupported file type: {ext}. Supported: {SUPPORTED_EXTENSIONS}"
@@ -133,6 +144,12 @@ def main() -> None:
         default="gpt-4o-mini",
         help="LLM model to use (default: gpt-4o-mini)",
     )
+    parser.add_argument(
+        "--pdf-parser",
+        choices=["pymupdf", "mineru"],
+        default="pymupdf",
+        help="PDF parser to use: pymupdf (default, fast) or mineru (high quality)",
+    )
 
     args = parser.parse_args()
 
@@ -148,8 +165,10 @@ def main() -> None:
 
     # Initialize parser and extractor
     print(f"Parsing: {args.file}")
+    if args.file.suffix.lower() == ".pdf":
+        print(f"Using PDF parser: {args.pdf_parser}")
     try:
-        doc_parser = get_parser_for_file(args.file)
+        doc_parser = get_parser_for_file(args.file, pdf_parser=args.pdf_parser)
         document = doc_parser.parse(args.file)
     except ImportError as e:
         print(f"Error: {e}")

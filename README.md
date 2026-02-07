@@ -35,6 +35,9 @@ uv sync --extra memgraph
 # Install with contract parsing support (.docx, .pdf)
 uv sync --extra contracts
 
+# Install with MinerU for high-quality PDF parsing
+uv pip install -U "mineru[all]"
+
 # Install with dev dependencies (pytest)
 uv sync --extra dev
 
@@ -106,6 +109,9 @@ uv run python scripts/extract_clauses.py data/test_contracts/contract.docx
 # Extract from PDF
 uv run python scripts/extract_clauses.py contract.pdf
 
+# Use MinerU for high-quality PDF parsing
+uv run python scripts/extract_clauses.py contract.pdf --pdf-parser mineru
+
 # Use LLM for higher quality extraction
 uv run python scripts/extract_clauses.py contract.docx --extractor llm --api-key sk-...
 
@@ -127,8 +133,13 @@ from graph_builder.clauses import PatternClauseExtractor
 parser = DocxParser()
 doc = parser.parse(Path("contract.docx"))
 
-# Or parse a .pdf document
+# Or parse a .pdf document (fast, using PyMuPDF)
 parser = PdfParser()
+doc = parser.parse(Path("contract.pdf"))
+
+# Or use MinerU for high-quality PDF parsing
+from graph_builder.parsing import MineruPdfParser
+parser = MineruPdfParser()
 doc = parser.parse(Path("contract.pdf"))
 
 # Extract clauses

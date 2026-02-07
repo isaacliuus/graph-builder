@@ -6,7 +6,8 @@ Document parsing utilities for extracting text and structure from various file f
 
 - `base.py` - `DocumentParser` Protocol defining the parser interface
 - `docx_parser.py` - Microsoft Word .docx file parser using python-docx
-- `pdf_parser.py` - PDF file parser using PyMuPDF
+- `pdf_parser.py` - PDF file parser using PyMuPDF (fast)
+- `mineru_parser.py` - PDF file parser using MinerU (high quality)
 
 ## Protocol
 
@@ -24,17 +25,28 @@ class DocumentParser(Protocol):
 - Tracks character offsets for each paragraph
 - Stores structured data in `Document.metadata["paragraphs"]`
 
-## PdfParser Features
+## PdfParser Features (PyMuPDF)
 
 - Extracts text blocks from PDF pages using PyMuPDF (fitz)
 - Detects headings via font size (relative to median) and bold flags
 - Detects section numbers via regex (same pattern as DocxParser)
 - Tracks character offsets for each paragraph
+- Fast and lightweight
 - Stores structured data in same format as DocxParser
+
+## MineruPdfParser Features (MinerU)
+
+- High-quality PDF extraction using MinerU (magic_pdf)
+- Better handling of complex layouts, tables, and formulas
+- Outputs markdown which is parsed into paragraph metadata
+- Supports OCR for scanned documents
+- Configurable parsing method: "auto", "ocr", or "txt"
+- Configurable language: "en" (English), "ch" (Chinese)
+- Stores structured data in same format as other parsers
 
 ## Paragraph Metadata Format
 
-Both parsers produce the same metadata format:
+All parsers produce the same metadata format:
 
 ```python
 {
@@ -50,10 +62,23 @@ Both parsers produce the same metadata format:
 
 ## Lazy Loading
 
-Both `python-docx` and `PyMuPDF` dependencies are lazy-loaded to avoid import errors when the `contracts` extra is not installed.
+All dependencies are lazy-loaded to avoid import errors when optional extras are not installed.
 
 ## Installation
 
 ```bash
+# For PyMuPDF-based parsing (fast)
 uv sync --extra contracts
+
+# For MinerU-based parsing (high quality)
+uv pip install -U "mineru[all]"
 ```
+
+## Choosing a PDF Parser
+
+| Parser | Speed | Quality | Dependencies |
+|--------|-------|---------|--------------|
+| PdfParser (PyMuPDF) | Fast | Good | PyMuPDF |
+| MineruPdfParser | Slower | Excellent | MinerU (large) |
+
+Use PyMuPDF for quick processing and MinerU for complex documents requiring higher accuracy.
