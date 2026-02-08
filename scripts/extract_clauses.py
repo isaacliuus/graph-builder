@@ -24,7 +24,7 @@ from graph_builder.parsing import DocxParser, PdfParser
 from graph_builder.clauses import PatternClauseExtractor
 
 SUPPORTED_EXTENSIONS = {".docx", ".pdf"}
-PDF_PARSERS = {"pymupdf", "mineru"}
+PDF_PARSERS = {"pymupdf", "mineru", "docling"}
 
 
 def print_clauses_table(clauses: list) -> None:
@@ -85,7 +85,7 @@ def get_parser_for_file(file_path: Path, pdf_parser: str = "pymupdf"):
 
     Args:
         file_path: Path to the file.
-        pdf_parser: PDF parser to use - "pymupdf" (default) or "mineru".
+        pdf_parser: PDF parser to use - "pymupdf" (default), "mineru", or "docling".
     """
     ext = file_path.suffix.lower()
     if ext == ".docx":
@@ -94,6 +94,9 @@ def get_parser_for_file(file_path: Path, pdf_parser: str = "pymupdf"):
         if pdf_parser == "mineru":
             from graph_builder.parsing import MineruPdfParser
             return MineruPdfParser()
+        elif pdf_parser == "docling":
+            from graph_builder.parsing import DoclingPdfParser
+            return DoclingPdfParser()
         else:
             return PdfParser()
     else:
@@ -146,9 +149,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--pdf-parser",
-        choices=["pymupdf", "mineru"],
+        choices=["pymupdf", "mineru", "docling"],
         default="pymupdf",
-        help="PDF parser to use: pymupdf (default, fast) or mineru (high quality)",
+        help="PDF parser to use: pymupdf (default, fast), mineru (high quality), or docling (high quality)",
     )
 
     args = parser.parse_args()

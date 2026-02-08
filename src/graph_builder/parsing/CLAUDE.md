@@ -8,6 +8,7 @@ Document parsing utilities for extracting text and structure from various file f
 - `docx_parser.py` - Microsoft Word .docx file parser using python-docx
 - `pdf_parser.py` - PDF file parser using PyMuPDF (fast)
 - `mineru_parser.py` - PDF file parser using MinerU (high quality)
+- `docling_parser.py` - PDF file parser using Docling (high quality)
 
 ## Protocol
 
@@ -44,6 +45,14 @@ class DocumentParser(Protocol):
 - Configurable language: "en" (English), "ch" (Chinese)
 - Stores structured data in same format as other parsers
 
+## DoclingPdfParser Features (Docling)
+
+- High-quality PDF extraction using Docling (IBM open-source)
+- Advanced table, OCR, and formula support
+- Outputs markdown which is parsed into paragraph metadata
+- Simple API via `DocumentConverter`
+- Stores structured data in same format as other parsers
+
 ## Paragraph Metadata Format
 
 All parsers produce the same metadata format:
@@ -72,6 +81,9 @@ uv sync --extra contracts
 
 # For MinerU-based parsing (high quality)
 uv pip install -U "mineru[all]"
+
+# For Docling-based parsing (high quality)
+uv sync --extra docling
 ```
 
 ## Choosing a PDF Parser
@@ -80,5 +92,6 @@ uv pip install -U "mineru[all]"
 |--------|-------|---------|--------------|
 | PdfParser (PyMuPDF) | Fast | Good | PyMuPDF |
 | MineruPdfParser | Slower | Excellent | MinerU (large) |
+| DoclingPdfParser | Slower | Excellent | Docling |
 
-Use PyMuPDF for quick processing and MinerU for complex documents requiring higher accuracy.
+Use PyMuPDF for quick processing and MinerU or Docling for complex documents requiring higher accuracy.

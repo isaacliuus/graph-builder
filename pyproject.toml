@@ -21,6 +21,7 @@ llm = ["openai>=1.0", "instructor>=1.0"]
 memgraph = ["neo4j>=5.0"]
 contracts = ["python-docx>=1.0", "PyMuPDF>=1.24"]
 mineru = ["mineru[all]>=2.0"]
+docling = ["docling>=2.0"]
 dev = ["pytest>=8.0", "pytest-mock>=3.0"]
 
 [build-system]

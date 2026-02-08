@@ -106,9 +106,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--pdf-parser",
-        choices=["pymupdf", "mineru"],
+        choices=["pymupdf", "mineru", "docling"],
         default="pymupdf",
-        help="PDF parser to use: pymupdf (default, fast) or mineru (high quality)",
+        help="PDF parser to use: pymupdf (default, fast), mineru (high quality), or docling (high quality)",
     )
 
     args = parser.parse_args()
@@ -149,6 +149,16 @@ def main() -> None:
         except ImportError:
             print("Warning: MinerU not available, .pdf files will not be supported")
             print("Install with: uv pip install -U 'mineru[all]'")
+    elif args.pdf_parser == "docling":
+        try:
+            from graph_builder.parsing import DoclingPdfParser
+            pdf_parser = DoclingPdfParser()
+            _ = pdf_parser.docling  # Test that docling is available
+            parsers[".pdf"] = pdf_parser
+            print("Using Docling PDF parser (high quality)")
+        except ImportError:
+            print("Warning: Docling not available, .pdf files will not be supported")
+            print("Install with: uv sync --extra docling")
     else:
         try:
             pdf_parser = PdfParser()
