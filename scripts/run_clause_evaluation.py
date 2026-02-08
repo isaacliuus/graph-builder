@@ -107,8 +107,8 @@ def main() -> None:
     parser.add_argument(
         "--pdf-parser",
         choices=["pymupdf", "mineru", "docling"],
-        default="pymupdf",
-        help="PDF parser to use: pymupdf (default, fast), mineru (high quality), or docling (high quality)",
+        default="docling",
+        help="PDF parser to use: docling (default, high quality), pymupdf (fast), or mineru (high quality)",
     )
 
     args = parser.parse_args()

@@ -80,12 +80,12 @@ def clauses_to_dict(clauses: list) -> list[dict]:
     ]
 
 
-def get_parser_for_file(file_path: Path, pdf_parser: str = "pymupdf"):
+def get_parser_for_file(file_path: Path, pdf_parser: str = "docling"):
     """Get the appropriate parser based on file extension.
 
     Args:
         file_path: Path to the file.
-        pdf_parser: PDF parser to use - "pymupdf" (default), "mineru", or "docling".
+        pdf_parser: PDF parser to use - "docling" (default), "pymupdf", or "mineru".
     """
     ext = file_path.suffix.lower()
     if ext == ".docx":
@@ -150,8 +150,8 @@ def main() -> None:
     parser.add_argument(
         "--pdf-parser",
         choices=["pymupdf", "mineru", "docling"],
-        default="pymupdf",
-        help="PDF parser to use: pymupdf (default, fast), mineru (high quality), or docling (high quality)",
+        default="docling",
+        help="PDF parser to use: docling (default, high quality), pymupdf (fast), or mineru (high quality)",
     )
 
     args = parser.parse_args()
