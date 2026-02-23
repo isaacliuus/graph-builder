@@ -9,6 +9,7 @@ Document parsing utilities for extracting text and structure from various file f
 - `pdf_parser.py` - PDF file parser using PyMuPDF (fast)
 - `mineru_parser.py` - PDF file parser using MinerU (high quality)
 - `docling_parser.py` - PDF file parser using Docling (high quality); also contains `DoclingParser` which handles both .pdf and .docx
+- `textin_parser.py` - Multi-format parser using Textin xParse API; supports .pdf, .docx, .doc, .pptx, .xlsx, .html, .txt
 
 ## Protocol
 
@@ -93,6 +94,16 @@ uv sync --extra docling
 - Used by `PipelineBuilder.entity_graph()` for contract-aware entity graph pipelines
 - Sets `file_type` metadata based on actual file suffix
 
+## TextinParser Features (Textin xParse API)
+
+- API-based document parsing via Textin's xParse service
+- Supports multiple formats: PDF, DOCX, DOC, PPTX, XLSX, HTML, TXT
+- Built-in heading detection via `outline_level` in detail array
+- Catalog/TOC extraction with hierarchy levels for tree building
+- Stores `textin_catalog` (TOC) and `textin_detail` (raw detail) in metadata
+- Credentials via `GRAPH_BUILDER_TEXTIN_APP_ID` / `GRAPH_BUILDER_TEXTIN_SECRET_CODE`
+- Selected via `GRAPH_BUILDER_DOCUMENT_PARSER=textin`
+
 ## Choosing a PDF Parser
 
 | Parser | Speed | Quality | Dependencies |
@@ -100,5 +111,6 @@ uv sync --extra docling
 | PdfParser (PyMuPDF) | Fast | Good | PyMuPDF |
 | MineruPdfParser | Slower | Excellent | MinerU (large) |
 | DoclingPdfParser | Slower | Excellent | Docling |
+| TextinParser | API-dependent | Excellent | httpx (API key required) |
 
-Use PyMuPDF for quick processing and MinerU or Docling for complex documents requiring higher accuracy.
+Use PyMuPDF for quick processing, MinerU or Docling for local complex documents, and Textin for API-based parsing with built-in catalog detection.

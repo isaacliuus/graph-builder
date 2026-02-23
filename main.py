@@ -165,7 +165,8 @@ def main():
 
         # Use run_from_files for contract files, run for pre-loaded documents
         if file_paths is not None:
-            console.print(f"[blue]Parsing {len(file_paths)} file(s) with Docling...[/blue]")
+            parser_name = settings.document_parser.capitalize()
+            console.print(f"[blue]Parsing {len(file_paths)} file(s) with {parser_name}...[/blue]")
             context = pipeline.run_from_files_with_context(file_paths)
         else:
             context = pipeline.run_with_context(documents)

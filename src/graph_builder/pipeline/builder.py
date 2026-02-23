@@ -133,25 +133,39 @@ class PipelineBuilder:
     @classmethod
     def entity_graph(cls, threshold: float = 85.0) -> EntityGraphPipeline:
         """Create an entity graph pipeline with clause chunking, spaCy extraction,
-        and fuzzy merging. Uses DoclingParser for file-based runs.
+        and fuzzy merging. Uses DoclingParser or TextinParser based on settings.
 
         If GRAPH_BUILDER_USE_GRAPHDB is enabled, automatically connects to
         the configured Memgraph database for persistence.
         """
-        from graph_builder.clauses.clause_chunker import DoclingClauseChunker
+        from graph_builder.config.settings import get_settings
         from graph_builder.extraction.spacy_extractor import SpacyEntityExtractor
         from graph_builder.graph.networkx_builder import NetworkXGraphBuilder
         from graph_builder.graphdb.factory import create_graphdb_from_settings
         from graph_builder.merging.fuzzy_merger import FuzzyEntityMerger
-        from graph_builder.parsing.docling_parser import DoclingParser
+
+        settings = get_settings()
+
+        if settings.document_parser == "textin":
+            from graph_builder.clauses.textin_chunker import TextinClauseChunker
+            from graph_builder.parsing.textin_parser import TextinParser
+
+            chunker = TextinClauseChunker()
+            parser = TextinParser()
+        else:
+            from graph_builder.clauses.clause_chunker import DoclingClauseChunker
+            from graph_builder.parsing.docling_parser import DoclingParser
+
+            chunker = DoclingClauseChunker()
+            parser = DoclingParser()
 
         builder = (
             cls()
-            .with_chunker(DoclingClauseChunker())
+            .with_chunker(chunker)
             .with_entity_extractor(SpacyEntityExtractor())
             .with_entity_merger(FuzzyEntityMerger(threshold=threshold))
             .with_graph_builder(NetworkXGraphBuilder(deduplicate=False))
-            .with_parser(DoclingParser())
+            .with_parser(parser)
         )
 
         graphdb = create_graphdb_from_settings()
@@ -165,30 +179,42 @@ class PipelineBuilder:
         cls, api_key: str, model: str = "gpt-4o-mini", threshold: float = 85.0
     ) -> EntityGraphPipeline:
         """Create an entity graph pipeline with LLM clause extraction, LLM entity
-        extraction, and fuzzy merging. Uses DoclingParser for file-based runs.
+        extraction, and fuzzy merging. Uses DoclingParser or TextinParser based on settings.
 
         If GRAPH_BUILDER_USE_GRAPHDB is enabled, automatically connects to
         the configured Memgraph database for persistence.
         """
-        from graph_builder.clauses.clause_chunker import DoclingClauseChunker
+        from graph_builder.config.settings import get_settings
         from graph_builder.clauses.llm_extractor import LLMClauseExtractor
         from graph_builder.extraction.llm_extractor import LLMEntityExtractor
         from graph_builder.graph.networkx_builder import NetworkXGraphBuilder
         from graph_builder.graphdb.factory import create_graphdb_from_settings
         from graph_builder.merging.fuzzy_merger import FuzzyEntityMerger
-        from graph_builder.parsing.docling_parser import DoclingParser
+
+        settings = get_settings()
+
+        if settings.document_parser == "textin":
+            from graph_builder.clauses.textin_chunker import TextinClauseChunker
+            from graph_builder.parsing.textin_parser import TextinParser
+
+            chunker = TextinClauseChunker()
+            parser = TextinParser()
+        else:
+            from graph_builder.clauses.clause_chunker import DoclingClauseChunker
+            from graph_builder.parsing.docling_parser import DoclingParser
+
+            chunker = DoclingClauseChunker(
+                clause_extractor=LLMClauseExtractor(api_key=api_key, model=model)
+            )
+            parser = DoclingParser()
 
         builder = (
             cls()
-            .with_chunker(
-                DoclingClauseChunker(
-                    clause_extractor=LLMClauseExtractor(api_key=api_key, model=model)
-                )
-            )
+            .with_chunker(chunker)
             .with_entity_extractor(LLMEntityExtractor(api_key=api_key, model=model))
             .with_entity_merger(FuzzyEntityMerger(threshold=threshold))
             .with_graph_builder(NetworkXGraphBuilder(deduplicate=False))
-            .with_parser(DoclingParser())
+            .with_parser(parser)
         )
 
         graphdb = create_graphdb_from_settings()

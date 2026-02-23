@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # Graph settings
     deduplicate_entities: bool = True
 
+    # Textin settings
+    textin_app_id: str = ""
+    textin_secret_code: str = ""
+    document_parser: str = "docling"  # "docling" or "textin"
+
     # Memgraph settings
     memgraph_host: str = "localhost"
     memgraph_port: int = 7687

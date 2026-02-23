@@ -8,6 +8,7 @@ Clause extraction from legal contracts and documents.
 - `pattern_extractor.py` - Rule-based clause extraction using keyword matching
 - `llm_extractor.py` - LLM-based clause extraction using OpenAI + instructor (optional dependency)
 - `clause_chunker.py` - `ClauseChunker` adapter that wraps a `ClauseExtractor` to implement the `Chunker` protocol
+- `textin_chunker.py` - `TextinClauseChunker` that uses Textin's catalog tree for clause boundary detection
 
 ## Protocol
 
@@ -108,3 +109,13 @@ chunker = DoclingClauseChunker(clause_extractor=LLMClauseExtractor(api_key="sk-.
 # Use in entity graph pipeline
 chunks = chunker.chunk(documents)  # documents should be parsed by DoclingParser
 ```
+
+## TextinClauseChunker
+
+Chunker that uses Textin's catalog tree (from `TextinParser`) to detect clause boundaries. Uses the `hierarchy` levels from the TOC to build a tree, with top-level nodes (hierarchy=1) defining clause boundaries. More reliable than regex-based section detection since it uses Textin's built-in heading analysis.
+
+- Expects documents parsed by `TextinParser` (with `textin_catalog` metadata)
+- Builds catalog tree via parent-stack algorithm (`build_catalog_tree()`)
+- Classifies clause types using the same `CLAUSE_TYPE_KEYWORDS` as `PatternClauseExtractor`
+- Stores catalog tree structure in chunk metadata for downstream use
+- Selected automatically when `GRAPH_BUILDER_DOCUMENT_PARSER=textin`
