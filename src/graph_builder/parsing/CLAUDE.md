@@ -8,7 +8,7 @@ Document parsing utilities for extracting text and structure from various file f
 - `docx_parser.py` - Microsoft Word .docx file parser using python-docx
 - `pdf_parser.py` - PDF file parser using PyMuPDF (fast)
 - `mineru_parser.py` - PDF file parser using MinerU (high quality)
-- `docling_parser.py` - PDF file parser using Docling (high quality)
+- `docling_parser.py` - PDF file parser using Docling (high quality); also contains `DoclingParser` which handles both .pdf and .docx
 
 ## Protocol
 
@@ -85,6 +85,13 @@ uv pip install -U "mineru[all]"
 # For Docling-based parsing (high quality)
 uv sync --extra docling
 ```
+
+## DoclingParser Features (Docling, .pdf + .docx)
+
+- Subclass of `DoclingPdfParser` that also supports .docx files
+- Docling's `DocumentConverter` handles both formats natively
+- Used by `PipelineBuilder.entity_graph()` for contract-aware entity graph pipelines
+- Sets `file_type` metadata based on actual file suffix
 
 ## Choosing a PDF Parser
 

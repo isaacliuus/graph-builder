@@ -7,6 +7,7 @@ Clause extraction from legal contracts and documents.
 - `base.py` - `ClauseExtractor` Protocol defining the extractor interface
 - `pattern_extractor.py` - Rule-based clause extraction using keyword matching
 - `llm_extractor.py` - LLM-based clause extraction using OpenAI + instructor (optional dependency)
+- `clause_chunker.py` - `ClauseChunker` adapter that wraps a `ClauseExtractor` to implement the `Chunker` protocol
 
 ## Protocol
 
@@ -83,3 +84,27 @@ for clause in clauses:
 - Supports bilingual content (English/Chinese)
 - Higher accuracy than pattern-based extraction
 - Requires `llm` extra: `uv sync --extra llm`
+
+## ClauseChunker
+
+Base adapter that wraps a `ClauseExtractor` and implements the `Chunker` protocol from the pipeline. Each extracted clause becomes a `Chunk`, preserving clause metadata (type, section number, section title, confidence) in chunk metadata.
+
+## DoclingClauseChunker
+
+Subclass of `ClauseChunker` designed for Docling-parsed documents. This is the default chunker used by `PipelineBuilder.entity_graph()` and `PipelineBuilder.entity_graph_with_llm()`. Expects Documents parsed by `DoclingParser` (with paragraph metadata).
+
+### Usage
+
+```python
+from graph_builder.clauses import DoclingClauseChunker
+
+# Default (uses PatternClauseExtractor)
+chunker = DoclingClauseChunker()
+
+# With LLM clause extractor
+from graph_builder.clauses import LLMClauseExtractor
+chunker = DoclingClauseChunker(clause_extractor=LLMClauseExtractor(api_key="sk-..."))
+
+# Use in entity graph pipeline
+chunks = chunker.chunk(documents)  # documents should be parsed by DoclingParser
+```

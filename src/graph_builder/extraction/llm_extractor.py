@@ -79,7 +79,7 @@ class LLMEntityExtractor(EntityExtractorBase):
 
         for chunk in chunks:
             prompt = f"""Extract all named entities from the following text.
-Identify people, organizations, locations, dates, events, products, and concepts.
+Identify people, organizations, locations, dates.
 
 Text:
 {chunk.content}

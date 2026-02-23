@@ -236,3 +236,21 @@ class DoclingPdfParser:
             "start_char": start_char,
             "end_char": start_char + len(text),
         }
+
+
+class DoclingParser(DoclingPdfParser):
+    """Parser for both .pdf and .docx files using Docling.
+
+    Extends DoclingPdfParser to also handle .docx files, since Docling's
+    DocumentConverter supports both formats natively.
+    """
+
+    SUPPORTED_EXTENSIONS = {".pdf", ".docx"}
+
+    def parse(self, file_path: Path) -> Document:
+        """Parse a .pdf or .docx file using Docling."""
+        doc = super().parse(file_path)
+        # Set file_type based on actual suffix
+        suffix = Path(file_path).suffix.lower()
+        doc.metadata["file_type"] = suffix.lstrip(".")
+        return doc

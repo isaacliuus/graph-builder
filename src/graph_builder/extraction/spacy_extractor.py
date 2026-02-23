@@ -14,15 +14,15 @@ from graph_builder.extraction.utils import group_entities_by_chunk
 SPACY_TO_ENTITY_TYPE: dict[str, EntityType] = {
     "PERSON": EntityType.PERSON,
     "ORG": EntityType.ORGANIZATION,
-    "GPE": EntityType.LOCATION,
-    "LOC": EntityType.LOCATION,
-    "DATE": EntityType.DATE,
-    "EVENT": EntityType.EVENT,
-    "PRODUCT": EntityType.PRODUCT,
-    "WORK_OF_ART": EntityType.CONCEPT,
-    "LAW": EntityType.CONCEPT,
-    "NORP": EntityType.ORGANIZATION,
-    "FAC": EntityType.LOCATION,
+    # "GPE": EntityType.LOCATION,
+    # "LOC": EntityType.LOCATION,
+    # "DATE": EntityType.DATE,
+    # "EVENT": EntityType.EVENT,
+    # "PRODUCT": EntityType.PRODUCT,
+    # "WORK_OF_ART": EntityType.CONCEPT,
+    # "LAW": EntityType.CONCEPT,
+    # "NORP": EntityType.ORGANIZATION,
+    # "FAC": EntityType.LOCATION,
 }
 
 
