@@ -22,6 +22,7 @@ from graph_builder.evaluation.clause_evaluator import (
     ClauseEvaluationResult,
     ClauseEvaluator,
     calculate_boundary_iou,
+    calculate_title_similarity,
 )
 
 __all__ = [
@@ -42,4 +43,5 @@ __all__ = [
     "ClauseEvaluationResult",
     "ClauseEvaluator",
     "calculate_boundary_iou",
+    "calculate_title_similarity",
 ]

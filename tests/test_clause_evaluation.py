@@ -16,6 +16,7 @@ from graph_builder.evaluation.clause_evaluator import (
     ClauseEvaluationResult,
     ClauseDocumentResult,
     calculate_boundary_iou,
+    calculate_title_similarity,
     normalize_clause_type,
 )
 
@@ -192,6 +193,9 @@ class TestClauseDocumentResult:
         assert result.detection_fn == 0
         assert result.type_correct == 0
         assert result.type_total == 0
+        assert result.title_correct == 0
+        assert result.title_total == 0
+        assert result.title_similarities == []
         assert result.boundary_ious == []
 
 
@@ -205,6 +209,8 @@ class TestClauseEvaluationResult:
             detection_recall=0.75,
             detection_f1=0.77,
             type_accuracy=0.9,
+            title_accuracy=0.85,
+            mean_title_similarity=0.92,
             mean_boundary_iou=0.85,
         )
 
@@ -214,6 +220,8 @@ class TestClauseEvaluationResult:
         assert d["detection_recall"] == 0.75
         assert d["detection_f1"] == 0.77
         assert d["type_accuracy"] == 0.9
+        assert d["title_accuracy"] == 0.85
+        assert d["mean_title_similarity"] == 0.92
         assert d["mean_boundary_iou"] == 0.85
 
     def test_to_dict_with_details(self):
@@ -231,6 +239,8 @@ class TestClauseEvaluationResult:
             detection_recall=0.7,
             detection_f1=0.75,
             type_accuracy=0.9,
+            title_accuracy=0.85,
+            mean_title_similarity=0.92,
             mean_boundary_iou=0.8,
             details={"doc1": doc_result},
         )
@@ -359,6 +369,8 @@ class TestClauseEvaluator:
         assert result.detection_recall == 1.0
         assert result.detection_f1 == 1.0
         assert result.type_accuracy == 1.0
+        assert result.title_accuracy == 1.0
+        assert result.mean_title_similarity == 1.0
 
     def test_evaluate_with_false_positives(self, mock_parser, mock_extractor, tmp_path):
         """Test evaluation when extractor finds extra clauses."""
@@ -527,3 +539,150 @@ class TestClauseEvaluator:
 
         # Should match by title
         assert result.details["doc1"].detection_tp == 1
+
+    def test_evaluate_title_accuracy(self, mock_parser, mock_extractor, tmp_path):
+        """Test title accuracy calculation with matching titles."""
+        test_file = tmp_path / "test.docx"
+        test_file.touch()
+
+        dataset = [
+            GroundTruthContractDocument(
+                id="doc1",
+                file="test.docx",
+                clauses=[
+                    GroundTruthClause(
+                        type="DEFINITIONS",
+                        section_number="1",
+                        title="Definitions",
+                    ),
+                    GroundTruthClause(
+                        type="CONFIDENTIALITY",
+                        section_number="2",
+                        title="Confidentiality",
+                    ),
+                ],
+            )
+        ]
+
+        evaluator = ClauseEvaluator(mock_parser, mock_extractor, base_path=tmp_path)
+        result = evaluator.evaluate(dataset)
+
+        assert result.title_accuracy == 1.0
+        assert result.mean_title_similarity == 1.0
+
+    def test_evaluate_title_accuracy_mismatch(self, mock_parser, tmp_path):
+        """Test title accuracy when extracted titles differ from ground truth."""
+        test_file = tmp_path / "test.docx"
+        test_file.touch()
+
+        wrong_title_extractor = MagicMock()
+
+        def extract_wrong_title(doc):
+            return [
+                Clause(
+                    content="1. Definitions\nTerms defined below.",
+                    type=ClauseType.DEFINITIONS,
+                    location=ClauseLocation(
+                        paragraph_index=0,
+                        section_number="1",
+                        section_title="Completely Wrong Title",
+                        start_char=0,
+                        end_char=35,
+                    ),
+                    document_id=doc.id,
+                ),
+            ]
+
+        wrong_title_extractor.extract = extract_wrong_title
+
+        dataset = [
+            GroundTruthContractDocument(
+                id="doc1",
+                file="test.docx",
+                clauses=[
+                    GroundTruthClause(
+                        type="DEFINITIONS",
+                        section_number="1",
+                        title="Definitions",
+                    ),
+                ],
+            )
+        ]
+
+        evaluator = ClauseEvaluator(mock_parser, wrong_title_extractor, base_path=tmp_path)
+        result = evaluator.evaluate(dataset)
+
+        assert result.title_accuracy == 0.0
+        assert result.mean_title_similarity < 0.7
+
+    def test_evaluate_title_no_gt_title(self, mock_parser, mock_extractor, tmp_path):
+        """Test that title metrics skip clauses without ground truth titles."""
+        test_file = tmp_path / "test.docx"
+        test_file.touch()
+
+        dataset = [
+            GroundTruthContractDocument(
+                id="doc1",
+                file="test.docx",
+                clauses=[
+                    GroundTruthClause(
+                        type="DEFINITIONS",
+                        section_number="1",
+                        # No title in ground truth
+                    ),
+                ],
+            )
+        ]
+
+        evaluator = ClauseEvaluator(mock_parser, mock_extractor, base_path=tmp_path)
+        result = evaluator.evaluate(dataset)
+
+        # No title comparisons should be made
+        assert result.details["doc1"].title_total == 0
+        assert result.title_accuracy == 0.0
+        assert result.mean_title_similarity == 0.0
+
+
+class TestTitleSimilarity:
+    """Tests for calculate_title_similarity function."""
+
+    def test_identical_titles(self):
+        """Test similarity of identical titles."""
+        assert calculate_title_similarity("Definitions", "Definitions") == 1.0
+
+    def test_case_insensitive(self):
+        """Test that comparison is case-insensitive."""
+        assert calculate_title_similarity("DEFINITIONS", "definitions") == 1.0
+
+    def test_whitespace_normalized(self):
+        """Test that extra whitespace is normalized."""
+        assert calculate_title_similarity("Payment  Terms", "Payment Terms") == 1.0
+
+    def test_similar_titles(self):
+        """Test similar but not identical titles."""
+        sim = calculate_title_similarity("Confidential Information", "Confidentiality")
+        assert sim > 0.5
+
+    def test_completely_different(self):
+        """Test completely different titles."""
+        sim = calculate_title_similarity("Payment", "不可抗力")
+        assert sim < 0.3
+
+    def test_both_empty(self):
+        """Test both titles empty."""
+        assert calculate_title_similarity("", "") == 1.0
+
+    def test_one_empty(self):
+        """Test one title empty."""
+        assert calculate_title_similarity("Definitions", "") == 0.0
+        assert calculate_title_similarity("", "Definitions") == 0.0
+
+    def test_chinese_titles(self):
+        """Test Chinese title matching."""
+        sim = calculate_title_similarity("保密条款", "保密条款")
+        assert sim == 1.0
+
+    def test_chinese_similar(self):
+        """Test similar Chinese titles."""
+        sim = calculate_title_similarity("保密义务", "保密条款")
+        assert sim >= 0.5

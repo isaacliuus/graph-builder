@@ -46,6 +46,10 @@ def print_results(result: ClauseEvaluationResult) -> None:
     print("\nType Classification:")
     print(f"  Accuracy:  {result.type_accuracy:.3f}")
 
+    print("\nTitle Matching:")
+    print(f"  Accuracy:       {result.title_accuracy:.3f}")
+    print(f"  Mean Similarity: {result.mean_title_similarity:.3f}")
+
     print("\nBoundary Detection:")
     print(f"  Mean IoU:  {result.mean_boundary_iou:.3f}")
 
@@ -57,6 +61,11 @@ def print_results(result: ClauseEvaluationResult) -> None:
             f"FP={detail.detection_fp}, FN={detail.detection_fn}"
         )
         print(f"    Type Correct: {detail.type_correct}/{detail.type_total}")
+        if detail.title_total > 0:
+            print(f"    Title Correct: {detail.title_correct}/{detail.title_total}")
+        if detail.title_similarities:
+            mean_sim = sum(detail.title_similarities) / len(detail.title_similarities)
+            print(f"    Mean Title Similarity: {mean_sim:.3f}")
         if detail.boundary_ious:
             mean_iou = sum(detail.boundary_ious) / len(detail.boundary_ious)
             print(f"    Mean Boundary IoU: {mean_iou:.3f}")
@@ -194,7 +203,8 @@ def main() -> None:
     if textin_mode:
         from graph_builder.clauses import TextinClauseExtractor
         print("Using Textin clause extractor...")
-        extractor = TextinClauseExtractor()
+        api_key = args.api_key or os.getenv("OPENAI_API_KEY")
+        extractor = TextinClauseExtractor(api_key=api_key)
     elif args.extractor == "pattern":
         print("Using pattern-based extractor...")
         extractor = PatternClauseExtractor()
