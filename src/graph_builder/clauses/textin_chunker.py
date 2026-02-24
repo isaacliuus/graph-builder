@@ -130,7 +130,6 @@ class TextinClauseChunker:
             if entry.get("hierarchy", 99) <= self.clause_level
         ]
 
-        print(len(clause_nodes))
         for node in clause_nodes:
             title = node.get("title", "")
 
@@ -199,20 +198,58 @@ class TextinClauseChunker:
     ) -> int | None:
         """Find the start character offset for a catalog title.
 
-        First tries to match against paragraph metadata, then falls back
-        to searching in the content directly.
+        Tries exact match first, then fuzzy match against paragraph text,
+        then falls back to searching in the content directly.
         """
         if not title:
             return None
 
-        # Try matching against paragraphs
+        # 1. Exact substring match against paragraphs
         for para in paragraphs:
             if title in para.get("text", ""):
                 return para["start_char"]
 
-        # Fallback: search in content
+        # 2. Fuzzy match against paragraphs (handles whitespace/formatting diffs)
+        from difflib import SequenceMatcher
+
+        title_normalized = self._normalize(title)
+        best_ratio = 0.0
+        best_para = None
+
+        for para in paragraphs:
+            para_text = para.get("text", "")
+            if not para_text:
+                continue
+            para_normalized = self._normalize(para_text)
+
+            # Compare against full paragraph text (for short headings)
+            ratio = SequenceMatcher(
+                None, title_normalized, para_normalized
+            ).ratio()
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_para = para
+
+            # Also check if title is a fuzzy substring of longer paragraphs
+            if len(para_normalized) > len(title_normalized):
+                # Sliding window check on the paragraph prefix
+                prefix = para_normalized[: len(title_normalized) + 10]
+                ratio = SequenceMatcher(None, title_normalized, prefix).ratio()
+                if ratio > best_ratio:
+                    best_ratio = ratio
+                    best_para = para
+
+        if best_para is not None and best_ratio >= 0.7:
+            return best_para["start_char"]
+
+        # 3. Fallback: exact search in content
         pos = content.find(title)
         return pos if pos >= 0 else None
+
+    @staticmethod
+    def _normalize(text: str) -> str:
+        """Normalize text for fuzzy comparison (collapse whitespace, lowercase)."""
+        return " ".join(text.lower().split())
 
     @staticmethod
     def _classify_clause_type(title: str, content: str) -> ClauseType:

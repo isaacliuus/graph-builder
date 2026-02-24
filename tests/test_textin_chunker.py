@@ -517,3 +517,54 @@ class TestTextinClauseChunkerGeneral:
         assert "Sub B" in chunks[1].content
         for chunk in chunks:
             assert chunk.metadata["catalog_node"]["hierarchy"] == 3
+
+    def test_fuzzy_title_match_extra_whitespace(self):
+        """Test that titles with extra whitespace are matched fuzzily."""
+        markdown = (
+            "# Title\n\n"
+            "## Article 1  Definitions\n\n"
+            "Terms defined here for the agreement.\n"
+        )
+        toc = [
+            {"title": "Title", "hierarchy": 1},
+            # TOC title has different spacing than paragraph text
+            {"title": "Article 1    Definitions", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Title", "start_char": 2, "end_char": 7},
+            {"text": "Article 1  Definitions", "start_char": 12, "end_char": 34},
+            {"text": "Terms defined here for the agreement.", "start_char": 36, "end_char": 72},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        chunker = TextinClauseChunker(min_clause_length=10)
+        chunks = chunker.chunk([doc])
+
+        assert len(chunks) == 1
+        assert "Definitions" in chunks[0].content
+
+    def test_fuzzy_title_match_minor_differences(self):
+        """Test fuzzy match handles minor text differences between TOC and paragraphs."""
+        markdown = (
+            "# Title\n\n"
+            "## 第十一条 不可抗力\n\n"
+            "Some force majeure content for the clause.\n"
+        )
+        toc = [
+            {"title": "Title", "hierarchy": 1},
+            # TOC has extra spaces
+            {"title": "第十一条    不可抗力", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Title", "start_char": 2, "end_char": 7},
+            # Paragraph has single space
+            {"text": "第十一条 不可抗力", "start_char": 12, "end_char": 21},
+            {"text": "Some force majeure content for the clause.", "start_char": 23, "end_char": 65},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        chunker = TextinClauseChunker(min_clause_length=10)
+        chunks = chunker.chunk([doc])
+
+        assert len(chunks) == 1
+        assert "不可抗力" in chunks[0].content
