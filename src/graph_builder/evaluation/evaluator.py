@@ -16,14 +16,14 @@ ENTITY_TYPE_MAP: dict[str, EntityType] = {
     "PERSON": EntityType.PERSON,
     "ORG": EntityType.ORGANIZATION,
     "ORGANIZATION": EntityType.ORGANIZATION,
-    "LOC": EntityType.LOCATION,
-    "LOCATION": EntityType.LOCATION,
-    "GPE": EntityType.LOCATION,
-    "DATE": EntityType.DATE,
-    "EVENT": EntityType.EVENT,
-    "PRODUCT": EntityType.PRODUCT,
-    "CONCEPT": EntityType.CONCEPT,
-    "OTHER": EntityType.OTHER,
+    # "LOC": EntityType.LOCATION,
+    # "LOCATION": EntityType.LOCATION,
+    # "GPE": EntityType.LOCATION,
+    # "DATE": EntityType.DATE,
+    # "EVENT": EntityType.EVENT,
+    # "PRODUCT": EntityType.PRODUCT,
+    # "CONCEPT": EntityType.CONCEPT,
+    # "OTHER": EntityType.OTHER,
 }
 
 

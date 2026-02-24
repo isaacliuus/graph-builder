@@ -78,13 +78,25 @@ class LLMEntityExtractor(EntityExtractorBase):
         entities: list[Entity] = []
 
         for chunk in chunks:
-            prompt = f"""Extract all named entities from the following text.
-Identify people, organizations, locations, dates.
+            prompt = f"""Extract only PERSON and ORGANIZATION (ORG) entities from the following text.
+
+Rules:
+- PERSON: Real individual people mentioned by name. Include full names when available.
+  Examples: "张三", "Steve Jobs", "李经理" (if used as a specific person reference).
+  Do NOT include: job titles alone ("the manager"), pronouns ("he/she"), generic roles ("the parties").
+- ORG: Named companies, institutions, government bodies, or formal organizations.
+  Examples: "Apple Inc.", "北京大学", "甲方公司名称" (when a specific company name is given).
+  Do NOT include: "甲方"/"乙方" (these are role labels, not organization names), generic terms ("the company"), departments that are not standalone entities.
+
+Do NOT extract:
+- Locations, dates, products, events, or any other entity type
+- Generic references like "Party A", "Party B", "甲方", "乙方" unless they resolve to a specific name
+- Section numbers, clause references, or document metadata
 
 Text:
 {chunk.content}
 
-Return a list of entities with their names, types, and confidence scores."""
+Return only PERSON and ORG entities with their names exactly as they appear in the text, types, and confidence scores."""
 
             response = self.client.chat.completions.create(
                 model=self.model,
