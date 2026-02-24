@@ -106,9 +106,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--pdf-parser",
-        choices=["pymupdf", "mineru", "docling"],
+        choices=["pymupdf", "mineru", "docling", "textin"],
         default="docling",
-        help="PDF parser to use: docling (default, high quality), pymupdf (fast), or mineru (high quality)",
+        help="PDF parser to use: docling (default, high quality), pymupdf (fast), mineru (high quality), or textin (API-based)",
     )
 
     args = parser.parse_args()
@@ -138,8 +138,24 @@ def main() -> None:
     except ImportError:
         print("Warning: python-docx not available, .docx files will not be supported")
 
+    # Track whether we need a special extractor (e.g. Textin)
+    textin_mode = False
+
     # Initialize PDF parser based on selection
-    if args.pdf_parser == "mineru":
+    if args.pdf_parser == "textin":
+        try:
+            from graph_builder.parsing import TextinParser
+            pdf_parser = TextinParser()
+            parsers[".pdf"] = pdf_parser
+            # Textin also supports .docx, .doc, etc.
+            for ext in (".docx", ".doc", ".pptx", ".xlsx", ".html", ".txt"):
+                parsers[ext] = pdf_parser
+            textin_mode = True
+            print("Using Textin xParse parser (API-based)")
+        except ImportError:
+            print("Warning: Textin parser not available")
+            sys.exit(1)
+    elif args.pdf_parser == "mineru":
         try:
             from graph_builder.parsing import MineruPdfParser
             pdf_parser = MineruPdfParser()
@@ -175,7 +191,11 @@ def main() -> None:
     print(f"Available parsers: {', '.join(parsers.keys())}")
 
     # Create extractor
-    if args.extractor == "pattern":
+    if textin_mode:
+        from graph_builder.clauses import TextinClauseExtractor
+        print("Using Textin clause extractor...")
+        extractor = TextinClauseExtractor()
+    elif args.extractor == "pattern":
         print("Using pattern-based extractor...")
         extractor = PatternClauseExtractor()
     else:

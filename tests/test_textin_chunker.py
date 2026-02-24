@@ -1,9 +1,9 @@
-"""Unit tests for Textin clause chunker."""
+"""Unit tests for Textin clause chunker and extractor."""
 
 import pytest
 from uuid import uuid4
 
-from graph_builder.clauses.textin_chunker import TextinClauseChunker
+from graph_builder.clauses.textin_chunker import TextinClauseChunker, TextinClauseExtractor
 from graph_builder.models.document import Document
 
 
@@ -568,3 +568,102 @@ class TestTextinClauseChunkerGeneral:
 
         assert len(chunks) == 1
         assert "不可抗力" in chunks[0].content
+
+
+class TestTextinClauseExtractor:
+    """Tests for TextinClauseExtractor (Chunk -> Clause adapter)."""
+
+    def test_extract_returns_clauses(self):
+        """Test that extract() returns Clause objects, not Chunks."""
+        markdown = (
+            "# Contract\n\n"
+            "## 1. Definitions\n\n"
+            "The following terms shall have the meanings set forth below in this agreement.\n\n"
+            "## 2. Confidentiality\n\n"
+            "Each party shall keep information confidential and shall not disclose.\n"
+        )
+        toc = [
+            {"title": "Contract", "hierarchy": 1},
+            {"title": "1. Definitions", "hierarchy": 2},
+            {"title": "2. Confidentiality", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Contract", "start_char": 2, "end_char": 10},
+            {"text": "1. Definitions", "start_char": 15, "end_char": 29},
+            {"text": "The following terms shall have the meanings set forth below in this agreement.", "start_char": 31, "end_char": 108},
+            {"text": "2. Confidentiality", "start_char": 113, "end_char": 131},
+            {"text": "Each party shall keep information confidential and shall not disclose.", "start_char": 133, "end_char": 202},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        extractor = TextinClauseExtractor(min_clause_length=10)
+        clauses = extractor.extract(doc)
+
+        assert len(clauses) == 2
+
+        from graph_builder.models.clause import Clause
+        for clause in clauses:
+            assert isinstance(clause, Clause)
+
+    def test_clause_location_fields(self):
+        """Test that Clause location fields are populated correctly."""
+        markdown = (
+            "# Title\n\n"
+            "## 3.1 Payment Terms\n\n"
+            "Payment shall be made within thirty days of invoice receipt per terms.\n"
+        )
+        toc = [
+            {"title": "Title", "hierarchy": 1},
+            {"title": "3.1 Payment Terms", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Title", "start_char": 2, "end_char": 7},
+            {"text": "3.1 Payment Terms", "start_char": 12, "end_char": 29},
+            {"text": "Payment shall be made within thirty days of invoice receipt per terms.", "start_char": 31, "end_char": 100},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        extractor = TextinClauseExtractor(min_clause_length=10)
+        clauses = extractor.extract(doc)
+
+        assert len(clauses) == 1
+        clause = clauses[0]
+
+        assert clause.location.section_number == "3.1"
+        assert clause.location.section_title == "Payment Terms"
+        assert clause.location.start_char == 12
+        assert clause.location.end_char == len(markdown)
+        assert clause.confidence == 1.0
+        assert clause.type.value == "PAYMENT"
+        assert clause.document_id == doc.id
+
+    def test_clause_paragraph_index(self):
+        """Test that paragraph_index is derived from start_char."""
+        markdown = (
+            "# Title\n\n"
+            "## Art 1\n\nContent for article one is long enough to pass the filter.\n"
+        )
+        toc = [
+            {"title": "Title", "hierarchy": 1},
+            {"title": "Art 1", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Title", "start_char": 2, "end_char": 7},
+            {"text": "Art 1", "start_char": 12, "end_char": 17},
+            {"text": "Content for article one is long enough to pass the filter.", "start_char": 19, "end_char": 77},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        extractor = TextinClauseExtractor(min_clause_length=10)
+        clauses = extractor.extract(doc)
+
+        assert len(clauses) == 1
+        # start_char=12 falls in paragraph index 1
+        assert clauses[0].location.paragraph_index == 1
+
+    def test_extractor_implements_protocol(self):
+        """Test that TextinClauseExtractor satisfies the ClauseExtractor protocol."""
+        from graph_builder.clauses.base import ClauseExtractor
+
+        extractor = TextinClauseExtractor()
+        assert isinstance(extractor, ClauseExtractor)

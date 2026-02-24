@@ -8,7 +8,7 @@ Clause extraction from legal contracts and documents.
 - `pattern_extractor.py` - Rule-based clause extraction using keyword matching
 - `llm_extractor.py` - LLM-based clause extraction using OpenAI + instructor (optional dependency)
 - `clause_chunker.py` - `ClauseChunker` adapter that wraps a `ClauseExtractor` to implement the `Chunker` protocol
-- `textin_chunker.py` - `TextinClauseChunker` that uses Textin's catalog tree for clause boundary detection
+- `textin_chunker.py` - `TextinClauseChunker` (Chunker protocol) and `TextinClauseExtractor` (ClauseExtractor protocol) using Textin's catalog tree
 
 ## Protocol
 
@@ -112,10 +112,19 @@ chunks = chunker.chunk(documents)  # documents should be parsed by DoclingParser
 
 ## TextinClauseChunker
 
-Chunker that uses Textin's catalog tree (from `TextinParser`) to detect clause boundaries. Uses the `hierarchy` levels from the TOC to build a tree, with top-level nodes (hierarchy=1) defining clause boundaries. More reliable than regex-based section detection since it uses Textin's built-in heading analysis.
+Chunker that uses Textin's catalog tree (from `TextinParser`) to detect clause boundaries. Uses the `hierarchy` levels from the TOC to build a tree. More reliable than regex-based section detection since it uses Textin's built-in heading analysis.
 
 - Expects documents parsed by `TextinParser` (with `textin_catalog` metadata)
 - Builds catalog tree via parent-stack algorithm (`build_catalog_tree()`)
+- `clause_level` parameter: level 2 (default) for articles, level 1 for top-level sections
 - Classifies clause types using the same `CLAUSE_TYPE_KEYWORDS` as `PatternClauseExtractor`
+- Fuzzy title matching via `difflib.SequenceMatcher` (threshold 0.7)
 - Stores catalog tree structure in chunk metadata for downstream use
 - Selected automatically when `GRAPH_BUILDER_DOCUMENT_PARSER=textin`
+
+## TextinClauseExtractor
+
+Adapter that wraps `TextinClauseChunker` and implements the `ClauseExtractor` protocol. Converts `Chunk` objects to `Clause` objects, enabling use with `ClauseEvaluator` and the clause evaluation script.
+
+- Used by `scripts/run_clause_evaluation.py --pdf-parser textin`
+- Derives `paragraph_index` from `start_char` against paragraph metadata

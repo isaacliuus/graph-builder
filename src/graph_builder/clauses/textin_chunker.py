@@ -3,7 +3,7 @@
 import re
 
 from graph_builder.clauses.pattern_extractor import CLAUSE_TYPE_KEYWORDS
-from graph_builder.models.clause import ClauseType
+from graph_builder.models.clause import Clause, ClauseLocation, ClauseType
 from graph_builder.models.document import Document, Chunk
 
 
@@ -269,3 +269,70 @@ class TextinClauseChunker:
                 best_type = clause_type
 
         return best_type
+
+
+class TextinClauseExtractor:
+    """Adapter that wraps TextinClauseChunker to implement ClauseExtractor protocol.
+
+    Converts Chunk objects (from TextinClauseChunker) into Clause objects,
+    enabling use with ClauseEvaluator and other components that expect
+    the ClauseExtractor interface.
+    """
+
+    def __init__(
+        self,
+        min_clause_length: int = 50,
+        clause_level: int = 2,
+    ) -> None:
+        self._chunker = TextinClauseChunker(
+            min_clause_length=min_clause_length,
+            clause_level=clause_level,
+        )
+
+    def extract(self, document: Document) -> list[Clause]:
+        """Extract clauses from a Textin-parsed document.
+
+        Args:
+            document: Document parsed by TextinParser (with textin_catalog metadata).
+
+        Returns:
+            List of Clause objects with location information.
+        """
+        chunks = self._chunker.chunk([document])
+        paragraphs = document.metadata.get("paragraphs", [])
+
+        clauses: list[Clause] = []
+        for chunk in chunks:
+            paragraph_index = self._find_paragraph_index(
+                chunk.start_index, paragraphs
+            )
+            clause = Clause(
+                content=chunk.content,
+                type=ClauseType(chunk.metadata["clause_type"]),
+                location=ClauseLocation(
+                    paragraph_index=paragraph_index,
+                    section_number=chunk.metadata.get("section_number"),
+                    section_title=chunk.metadata.get("section_title"),
+                    start_char=chunk.start_index,
+                    end_char=chunk.end_index,
+                ),
+                document_id=chunk.document_id,
+                confidence=chunk.metadata.get("confidence", 1.0),
+                metadata=chunk.metadata,
+            )
+            clauses.append(clause)
+
+        return clauses
+
+    @staticmethod
+    def _find_paragraph_index(start_char: int, paragraphs: list[dict]) -> int:
+        """Find the paragraph index that contains the given character offset."""
+        for i, para in enumerate(paragraphs):
+            para_start = para.get("start_char", 0)
+            para_end = para.get("end_char", 0)
+            if para_start <= start_char < para_end:
+                return i
+            # Also handle case where start_char matches exactly
+            if para_start == start_char:
+                return i
+        return 0
