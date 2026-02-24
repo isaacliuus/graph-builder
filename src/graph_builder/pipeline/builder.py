@@ -197,7 +197,7 @@ class PipelineBuilder:
             from graph_builder.clauses.textin_chunker import TextinClauseChunker
             from graph_builder.parsing.textin_parser import TextinParser
 
-            chunker = TextinClauseChunker()
+            chunker = TextinClauseChunker(api_key=api_key, model=model)
             parser = TextinParser()
         else:
             from graph_builder.clauses.clause_chunker import DoclingClauseChunker

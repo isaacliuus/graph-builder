@@ -117,10 +117,13 @@ Chunker that uses Textin's catalog tree (from `TextinParser`) to detect clause b
 - Expects documents parsed by `TextinParser` (with `textin_catalog` metadata)
 - Builds catalog tree via parent-stack algorithm (`build_catalog_tree()`)
 - `clause_level` parameter: level 2 (default) for articles, level 1 for top-level sections
-- Classifies clause types using the same `CLAUSE_TYPE_KEYWORDS` as `PatternClauseExtractor`
+- Classifies clause types using keyword matching by default, or LLM batch classification when `api_key` is provided
+- LLM classification: single API call per document via instructor + OpenAI, returns `ClauseClassifications` with per-clause confidence scores
+- Falls back to keyword matching (`CLAUSE_TYPE_KEYWORDS`) when no `api_key` or when a title is missing from LLM response
 - Fuzzy title matching via `difflib.SequenceMatcher` (threshold 0.7)
 - Stores catalog tree structure in chunk metadata for downstream use
 - Selected automatically when `GRAPH_BUILDER_DOCUMENT_PARSER=textin`
+- `PipelineBuilder.entity_graph_with_llm()` passes `api_key` and `model` to enable LLM classification
 
 ## TextinClauseExtractor
 

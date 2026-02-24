@@ -667,3 +667,141 @@ class TestTextinClauseExtractor:
 
         extractor = TextinClauseExtractor()
         assert isinstance(extractor, ClauseExtractor)
+
+
+class TestTextinClauseChunkerLLM:
+    """Tests for LLM-based clause type classification in TextinClauseChunker."""
+
+    def _make_contract_doc(self):
+        """Create a test contract document with multiple clauses."""
+        markdown = (
+            "# Contract\n\n"
+            "## 1. Definitions\n\n"
+            "The following terms shall have the meanings set forth below in this agreement.\n\n"
+            "## 2. Confidentiality\n\n"
+            "Each party shall keep information confidential and shall not disclose.\n\n"
+            "## 3. Payment Terms\n\n"
+            "Payment shall be made within thirty days of invoice receipt per terms.\n"
+        )
+        toc = [
+            {"title": "Contract", "hierarchy": 1},
+            {"title": "1. Definitions", "hierarchy": 2},
+            {"title": "2. Confidentiality", "hierarchy": 2},
+            {"title": "3. Payment Terms", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Contract", "start_char": 2, "end_char": 10},
+            {"text": "1. Definitions", "start_char": 15, "end_char": 29},
+            {"text": "The following terms shall have the meanings set forth below in this agreement.", "start_char": 31, "end_char": 108},
+            {"text": "2. Confidentiality", "start_char": 113, "end_char": 131},
+            {"text": "Each party shall keep information confidential and shall not disclose.", "start_char": 133, "end_char": 202},
+            {"text": "3. Payment Terms", "start_char": 207, "end_char": 223},
+            {"text": "Payment shall be made within thirty days of invoice receipt per terms.", "start_char": 225, "end_char": 294},
+        ]
+        return _make_textin_document(markdown, toc, paragraphs)
+
+    def _mock_llm_response(self):
+        """Create a mock LLM classification response."""
+        from graph_builder.clauses.textin_chunker import ClauseClassifications, ClauseClassification
+        from graph_builder.models.clause import ClauseType
+
+        return ClauseClassifications(clauses=[
+            ClauseClassification(title="1. Definitions", type=ClauseType.DEFINITIONS, confidence=0.95),
+            ClauseClassification(title="2. Confidentiality", type=ClauseType.CONFIDENTIALITY, confidence=0.92),
+            ClauseClassification(title="3. Payment Terms", type=ClauseType.PAYMENT, confidence=0.88),
+        ])
+
+    def test_llm_classification_used_when_api_key_provided(self, mocker):
+        """Test that LLM classification is called when api_key is set."""
+        doc = self._make_contract_doc()
+        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test")
+
+        mock_client = mocker.MagicMock()
+        mock_client.chat.completions.create.return_value = self._mock_llm_response()
+        chunker._client = mock_client
+
+        chunks = chunker.chunk([doc])
+
+        assert len(chunks) == 3
+        mock_client.chat.completions.create.assert_called_once()
+
+    def test_llm_classification_types_and_confidence(self, mocker):
+        """Test that LLM classification results are used for type and confidence."""
+        doc = self._make_contract_doc()
+        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test")
+
+        mock_client = mocker.MagicMock()
+        mock_client.chat.completions.create.return_value = self._mock_llm_response()
+        chunker._client = mock_client
+
+        chunks = chunker.chunk([doc])
+
+        assert chunks[0].metadata["clause_type"] == "DEFINITIONS"
+        assert chunks[0].metadata["confidence"] == 0.95
+        assert chunks[1].metadata["clause_type"] == "CONFIDENTIALITY"
+        assert chunks[1].metadata["confidence"] == 0.92
+        assert chunks[2].metadata["clause_type"] == "PAYMENT"
+        assert chunks[2].metadata["confidence"] == 0.88
+
+    def test_fallback_to_keyword_when_no_api_key(self):
+        """Test that keyword matching is used when api_key is empty."""
+        doc = self._make_contract_doc()
+        chunker = TextinClauseChunker(min_clause_length=10)  # no api_key
+
+        chunks = chunker.chunk([doc])
+
+        assert len(chunks) == 3
+        # Keyword matching should still classify correctly
+        assert chunks[0].metadata["clause_type"] == "DEFINITIONS"
+        assert chunks[0].metadata["confidence"] == 1.0  # keyword always 1.0
+
+    def test_llm_prompt_contains_all_titles(self, mocker):
+        """Test that the LLM prompt includes all clause titles and snippets."""
+        doc = self._make_contract_doc()
+        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test")
+
+        mock_client = mocker.MagicMock()
+        mock_client.chat.completions.create.return_value = self._mock_llm_response()
+        chunker._client = mock_client
+
+        chunker.chunk([doc])
+
+        call_args = mock_client.chat.completions.create.call_args
+        prompt = call_args.kwargs["messages"][0]["content"]
+        assert "1. Definitions" in prompt
+        assert "2. Confidentiality" in prompt
+        assert "3. Payment Terms" in prompt
+
+    def test_llm_missing_title_falls_back_to_keyword(self, mocker):
+        """Test that clauses not in LLM response fall back to keyword matching."""
+        from graph_builder.clauses.textin_chunker import ClauseClassifications, ClauseClassification
+        from graph_builder.models.clause import ClauseType
+
+        doc = self._make_contract_doc()
+        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test")
+
+        # LLM only returns 2 of 3 clauses
+        partial_response = ClauseClassifications(clauses=[
+            ClauseClassification(title="1. Definitions", type=ClauseType.DEFINITIONS, confidence=0.95),
+            ClauseClassification(title="2. Confidentiality", type=ClauseType.CONFIDENTIALITY, confidence=0.92),
+        ])
+
+        mock_client = mocker.MagicMock()
+        mock_client.chat.completions.create.return_value = partial_response
+        chunker._client = mock_client
+
+        chunks = chunker.chunk([doc])
+
+        assert len(chunks) == 3
+        # First two from LLM
+        assert chunks[0].metadata["confidence"] == 0.95
+        assert chunks[1].metadata["confidence"] == 0.92
+        # Third falls back to keyword (confidence=1.0)
+        assert chunks[2].metadata["clause_type"] == "PAYMENT"
+        assert chunks[2].metadata["confidence"] == 1.0
+
+    def test_extractor_forwards_api_key(self, mocker):
+        """Test that TextinClauseExtractor forwards api_key and model to chunker."""
+        extractor = TextinClauseExtractor(api_key="sk-test", model="gpt-4o")
+        assert extractor._chunker.api_key == "sk-test"
+        assert extractor._chunker.model == "gpt-4o"

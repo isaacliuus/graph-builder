@@ -2,9 +2,29 @@
 
 import re
 
+from pydantic import BaseModel, Field
+
 from graph_builder.clauses.pattern_extractor import CLAUSE_TYPE_KEYWORDS
 from graph_builder.models.clause import Clause, ClauseLocation, ClauseType
 from graph_builder.models.document import Document, Chunk
+
+
+class ClauseClassification(BaseModel):
+    """LLM classification result for a single clause."""
+
+    title: str = Field(description="The clause title (must match the input title exactly)")
+    type: ClauseType = Field(description="The classified clause type")
+    confidence: float = Field(
+        default=1.0, ge=0.0, le=1.0, description="Classification confidence"
+    )
+
+
+class ClauseClassifications(BaseModel):
+    """Batch classification results for multiple clauses."""
+
+    clauses: list[ClauseClassification] = Field(
+        default_factory=list, description="List of clause classifications"
+    )
 
 
 class TextinClauseChunker:
@@ -13,12 +33,18 @@ class TextinClauseChunker:
     Expects documents pre-parsed by TextinParser (with textin_catalog metadata).
     Uses the catalog's hierarchy levels to detect clause boundaries, which is
     more reliable than regex-based section detection.
+
+    When an api_key is provided, uses LLM batch classification for clause types
+    instead of keyword matching. This is more accurate for non-standard titles,
+    especially in Chinese contracts.
     """
 
     def __init__(
         self,
         min_clause_length: int = 50,
         clause_level: int = 2,
+        api_key: str = "",
+        model: str = "gpt-4o-mini",
     ) -> None:
         """Initialize the chunker.
 
@@ -28,9 +54,32 @@ class TextinClauseChunker:
                 Level 1 = top-level (e.g. document title, appendices).
                 Level 2 = articles/clauses (e.g. 第一条, 第二条). Default.
                 Level 3 = sub-clauses.
+            api_key: OpenAI API key for LLM classification. If empty, falls
+                back to keyword matching.
+            model: LLM model for clause type classification.
         """
         self.min_clause_length = min_clause_length
         self.clause_level = clause_level
+        self.api_key = api_key
+        self.model = model
+        self._client = None
+
+    @property
+    def client(self):
+        """Lazy load the instructor client."""
+        if self._client is None:
+            try:
+                import instructor
+                from openai import OpenAI
+            except ImportError as e:
+                raise ImportError(
+                    "LLM clause classification requires 'openai' and 'instructor' packages. "
+                    "Install with: uv sync --extra llm"
+                ) from e
+
+            openai_client = OpenAI(api_key=self.api_key)
+            self._client = instructor.from_openai(openai_client)
+        return self._client
 
     def chunk(self, documents: list[Document]) -> list[Chunk]:
         """Split documents into chunks using Textin catalog tree.
@@ -107,6 +156,49 @@ class TextinClauseChunker:
                 # Look deeper for matching nodes
                 self._walk_tree(node.get("children", []), result)
 
+    def _classify_clauses_llm(
+        self, clause_items: list[tuple[str, str]]
+    ) -> dict[str, tuple[ClauseType, float]]:
+        """Batch-classify clause types using a single LLM call.
+
+        Args:
+            clause_items: List of (title, content_snippet) tuples.
+
+        Returns:
+            Dict mapping title → (ClauseType, confidence).
+        """
+        clause_list = "\n".join(
+            f"- Title: {title}\n  Content: {snippet[:200]}"
+            for title, snippet in clause_items
+        )
+
+        prompt = f"""Classify each of the following contract clause titles into one of these types:
+DEFINITIONS, CONFIDENTIALITY, TERMINATION, INDEMNIFICATION, LIABILITY,
+GOVERNING_LAW, DISPUTE_RESOLUTION, FORCE_MAJEURE, PAYMENT,
+INTELLECTUAL_PROPERTY, WARRANTIES, REPRESENTATIONS, NOTICES,
+TERM_AND_TERMINATION, OTHER
+
+Chinese translations for reference:
+定义=DEFINITIONS, 保密=CONFIDENTIALITY, 终止=TERMINATION, 赔偿=INDEMNIFICATION,
+责任=LIABILITY, 适用法律=GOVERNING_LAW, 争议解决=DISPUTE_RESOLUTION,
+不可抗力=FORCE_MAJEURE, 支付/付款=PAYMENT, 知识产权=INTELLECTUAL_PROPERTY,
+保证=WARRANTIES, 陈述=REPRESENTATIONS, 通知=NOTICES, 期限=TERM_AND_TERMINATION
+
+For each clause, return the title exactly as given, the classified type, and your confidence (0.0-1.0).
+
+Clauses:
+{clause_list}"""
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            response_model=ClauseClassifications,
+        )
+
+        return {
+            c.title: (c.type, c.confidence) for c in response.clauses
+        }
+
     def _nodes_to_chunks(
         self,
         document: Document,
@@ -118,6 +210,9 @@ class TextinClauseChunker:
 
         Each clause spans from its title to the next clause's title
         (at the same or higher hierarchy level in the flat TOC).
+
+        When api_key is set, batch-classifies all clauses via LLM in a single
+        call. Otherwise falls back to keyword matching.
         """
         chunks: list[Chunk] = []
         content = document.content
@@ -130,6 +225,8 @@ class TextinClauseChunker:
             if entry.get("hierarchy", 99) <= self.clause_level
         ]
 
+        # First pass: extract all clause boundaries and content
+        clause_data: list[tuple[dict, int, int, str]] = []  # (node, start, end, content)
         for node in clause_nodes:
             title = node.get("title", "")
 
@@ -155,7 +252,25 @@ class TextinClauseChunker:
             if len(clause_content) < self.min_clause_length:
                 continue
 
-            clause_type = self._classify_clause_type(title, clause_content)
+            clause_data.append((node, start_char, end_char, clause_content))
+
+        # Batch classify via LLM or fall back to keyword matching
+        llm_results: dict[str, tuple[ClauseType, float]] = {}
+        if self.api_key and clause_data:
+            clause_items = [
+                (node.get("title", ""), clause_content)
+                for node, _, _, clause_content in clause_data
+            ]
+            llm_results = self._classify_clauses_llm(clause_items)
+
+        for node, start_char, end_char, clause_content in clause_data:
+            title = node.get("title", "")
+
+            if title in llm_results:
+                clause_type, confidence = llm_results[title]
+            else:
+                clause_type = self._classify_clause_type(title, clause_content)
+                confidence = 1.0
 
             section_match = re.match(r"^(\d+(?:\.\d+)*\.?)\s+", title)
             section_number = (
@@ -180,7 +295,7 @@ class TextinClauseChunker:
                         "clause_type": clause_type.value,
                         "section_number": section_number,
                         "section_title": section_title,
-                        "confidence": 1.0,
+                        "confidence": confidence,
                         "catalog_node": {
                             "title": title,
                             "hierarchy": node.get("hierarchy", 1),
@@ -190,7 +305,6 @@ class TextinClauseChunker:
                 )
             )
 
-        
         return chunks
 
     def _find_title_start(
@@ -283,10 +397,14 @@ class TextinClauseExtractor:
         self,
         min_clause_length: int = 50,
         clause_level: int = 2,
+        api_key: str = "",
+        model: str = "gpt-4o-mini",
     ) -> None:
         self._chunker = TextinClauseChunker(
             min_clause_length=min_clause_length,
             clause_level=clause_level,
+            api_key=api_key,
+            model=model,
         )
 
     def extract(self, document: Document) -> list[Clause]:
