@@ -470,6 +470,9 @@ class TextinClauseExtractor:
 
         clauses: list[Clause] = []
         for chunk in chunks:
+            if "clause_type" not in chunk.metadata:
+                # Skip preamble/postamble chunks which have no clause_type
+                continue
             paragraph_index = self._find_paragraph_index(
                 chunk.start_index, paragraphs
             )

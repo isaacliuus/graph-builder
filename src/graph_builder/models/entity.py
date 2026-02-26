@@ -10,12 +10,12 @@ class EntityType(str, Enum):
 
     PERSON = "PERSON"
     ORGANIZATION = "ORG"
-    # LOCATION = "LOC"
-    # DATE = "DATE"
-    # EVENT = "EVENT"
-    # PRODUCT = "PRODUCT"
-    # CONCEPT = "CONCEPT"
-    # OTHER = "OTHER"
+    LOCATION = "LOC"
+    DATE = "DATE"
+    EVENT = "EVENT"
+    PRODUCT = "PRODUCT"
+    CONCEPT = "CONCEPT"
+    OTHER = "OTHER"
 
 
 class Entity(BaseModel):
