@@ -3,7 +3,7 @@ name = "graph-builder"
 version = "0.1.0"
 description = "A modular knowledge graph pipeline for entity and relationship extraction"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
@@ -12,11 +12,17 @@ dependencies = [
     "networkx>=3.0",
     "rich>=13.0",
     "pylint>=4.0.4",
+    "pytest>=9.0.2",
+    "pip>=26.0",
 ]
 
 [project.optional-dependencies]
 llm = ["openai>=1.0", "instructor>=1.0"]
 memgraph = ["neo4j>=5.0"]
+contracts = ["python-docx>=1.0", "PyMuPDF>=1.24"]
+mineru = ["mineru[all]>=2.0"]
+docling = ["docling>=2.0"]
+fuzzy = ["rapidfuzz>=3.0"]
 dev = ["pytest>=8.0", "pytest-mock>=3.0"]
 
 [build-system]

@@ -19,3 +19,6 @@ Configuration management using pydantic-settings.
 - `GRAPH_BUILDER_MEMGRAPH_DATABASE` - Memgraph database name (default: memgraph)
 - `GRAPH_BUILDER_MEMGRAPH_ENCRYPTED` - Use encrypted connection (default: false)
 - `GRAPH_BUILDER_USE_GRAPHDB` - Enable graph database persistence (default: false)
+- `GRAPH_BUILDER_TEXTIN_APP_ID` - Textin xParse API app ID (default: empty)
+- `GRAPH_BUILDER_TEXTIN_SECRET_CODE` - Textin xParse API secret code (default: empty)
+- `GRAPH_BUILDER_DOCUMENT_PARSER` - Document parser to use: "docling" or "textin" (default: docling)

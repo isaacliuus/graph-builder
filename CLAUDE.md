@@ -22,10 +22,13 @@ Each module has its own CLAUDE.md with specific conventions:
 - `src/graph_builder/pipeline/CLAUDE.md` - Pipeline architecture
 - `src/graph_builder/chunking/CLAUDE.md` - Chunking implementation
 - `src/graph_builder/extraction/CLAUDE.md` - Extraction strategies
+- `src/graph_builder/parsing/CLAUDE.md` - Document parsing (.docx, .pdf)
+- `src/graph_builder/clauses/CLAUDE.md` - Clause extraction from contracts
 - `src/graph_builder/graph/CLAUDE.md` - Graph building rules
 - `src/graph_builder/evaluation/CLAUDE.md` - Evaluation metrics and datasets
 - `src/graph_builder/graphdb/CLAUDE.md` - Graph database persistence
 - `src/graph_builder/config/CLAUDE.md` - Configuration settings
+- `src/graph_builder/merging/CLAUDE.md` - Fuzzy entity merging and co-occurrence
 
 ### Testing
 

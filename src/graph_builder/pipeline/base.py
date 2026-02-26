@@ -47,6 +47,14 @@ class EntityExtractor(Protocol):  # pylint: disable=too-few-public-methods
 
 
 @runtime_checkable
+class EntityMerger(Protocol):  # pylint: disable=too-few-public-methods
+    """Protocol for entity mergers that deduplicate/merge similar entities."""
+
+    def merge(self, entities: list[Entity]) -> tuple[list[Entity], dict[UUID, UUID]]:
+        """Merge similar entities, returning merged list and ID mapping."""
+
+
+@runtime_checkable
 class RelationshipExtractor(Protocol):  # pylint: disable=too-few-public-methods
     """Protocol for relationship extractors."""
 

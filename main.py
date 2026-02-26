@@ -14,6 +14,8 @@ from graph_builder.config.settings import get_settings
 
 console = Console()
 
+CONTRACT_EXTENSIONS = {".pdf", ".docx"}
+
 
 def print_graph_summary(graph, entities, relationships):
     """Print a summary of the extracted graph."""
@@ -59,13 +61,56 @@ def print_graph_summary(graph, entities, relationships):
         console.print(rel_table)
 
 
+def print_merge_stats(metadata):
+    """Print merge statistics from the entity graph pipeline."""
+    stats = metadata.get("merge_stats")
+    if stats:
+        console.print()
+        console.print(
+            Panel.fit(
+                f"[bold yellow]Entity Merging[/bold yellow]\n\n"
+                f"Raw entities: {stats['raw_entity_count']}\n"
+                f"After merging: {stats['merged_entity_count']}\n"
+                f"Entities reduced: {stats['entities_reduced']}\n"
+                f"Co-occurrence relationships: {stats['relationship_count']}",
+                title="Merge Stats",
+            )
+        )
+
+
+def print_clause_stats(metadata):
+    """Print clause extraction statistics."""
+    stats = metadata.get("clause_stats")
+    if stats:
+        console.print()
+        type_lines = "\n".join(
+            f"  {ctype}: {count}" for ctype, count in stats["clause_types"].items()
+        )
+        console.print(
+            Panel.fit(
+                f"[bold cyan]Clause Extraction[/bold cyan]\n\n"
+                f"Total clauses: {stats['clause_count']}\n"
+                f"Clause types:\n{type_lines}",
+                title="Clause Stats",
+            )
+        )
+
+
+def _is_contract_file(path: Path) -> bool:
+    return path.suffix.lower() in CONTRACT_EXTENSIONS
+
+
 def main():
     """Main entry point for the CLI."""
     settings = get_settings()
 
+    # Parse arguments
+    use_entity_graph = "--entity-graph" in sys.argv
+    file_args = [a for a in sys.argv[1:] if not a.startswith("--")]
+
     # Check for input file argument
-    if len(sys.argv) < 2:
-        console.print("[yellow]Usage: python main.py <text_file>[/yellow]")
+    if not file_args:
+        console.print("[yellow]Usage: python main.py [--entity-graph] <file>[/yellow]")
         console.print()
         console.print("Running with sample text...")
         console.print()
@@ -88,33 +133,60 @@ def main():
             Document(content=sample_text_2, source="sample_2"),
             Document(content=sample_text_3, source="sample_3"),
         ]
+        file_paths = None
     else:
-        file_path = Path(sys.argv[1])
-        if not file_path.exists():
-            console.print(f"[red]Error: File '{file_path}' not found[/red]")
-            sys.exit(1)
+        file_paths = [Path(a) for a in file_args]
+        for fp in file_paths:
+            if not fp.exists():
+                console.print(f"[red]Error: File '{fp}' not found[/red]")
+                sys.exit(1)
 
-        content = file_path.read_text()
-        documents = [Document(content=content, source=str(file_path))]
+        # For non-entity-graph mode with text files, read content directly
+        if not use_entity_graph or not all(_is_contract_file(fp) for fp in file_paths):
+            content = "\n\n".join(fp.read_text() for fp in file_paths)
+            documents = [Document(content=content, source=str(file_paths[0]))]
+            file_paths = None
+        else:
+            documents = None
 
     console.print("[bold]Knowledge Graph Builder[/bold]")
     console.print()
 
     # Create pipeline based on settings
-    if settings.use_llm and settings.openai_api_key:
-        console.print("[blue]Using LLM-based extraction...[/blue]")
-        pipeline = PipelineBuilder.with_llm(
-            api_key=settings.openai_api_key, model=settings.llm_model
-        )
+    if use_entity_graph:
+        if settings.use_llm and settings.openai_api_key:
+            console.print("[blue]Using entity graph pipeline with LLM extraction + fuzzy merging...[/blue]")
+            pipeline = PipelineBuilder.entity_graph_with_llm(
+                api_key=settings.openai_api_key, model=settings.llm_model
+            )
+        else:
+            console.print("[blue]Using entity graph pipeline with spaCy extraction + fuzzy merging...[/blue]")
+            pipeline = PipelineBuilder.entity_graph()
+
+        # Use run_from_files for contract files, run for pre-loaded documents
+        if file_paths is not None:
+            parser_name = settings.document_parser.capitalize()
+            console.print(f"[blue]Parsing {len(file_paths)} file(s) with {parser_name}...[/blue]")
+            context = pipeline.run_from_files_with_context(file_paths)
+        else:
+            context = pipeline.run_with_context(documents)
+
+        # Print results
+        print_graph_summary(context.graph, context.entities, context.relationships)
+        print_clause_stats(context.metadata)
+        print_merge_stats(context.metadata)
     else:
-        console.print("[blue]Using spaCy-based extraction...[/blue]")
-        pipeline = PipelineBuilder.default()
+        if settings.use_llm and settings.openai_api_key:
+            console.print("[blue]Using LLM-based extraction...[/blue]")
+            pipeline = PipelineBuilder.with_llm(
+                api_key=settings.openai_api_key, model=settings.llm_model
+            )
+        else:
+            console.print("[blue]Using spaCy-based extraction...[/blue]")
+            pipeline = PipelineBuilder.default()
 
-    # Run the pipeline
-    context = pipeline.run_with_context(documents)
-
-    # Print results
-    print_graph_summary(context.graph, context.entities, context.relationships)
+        context = pipeline.run_with_context(documents)
+        print_graph_summary(context.graph, context.entities, context.relationships)
 
 
 if __name__ == "__main__":
