@@ -5,11 +5,22 @@ Document parsing utilities for extracting text and structure from various file f
 ## Files
 
 - `base.py` - `DocumentParser` Protocol defining the parser interface
+- `utils.py` - Shared utilities: `SECTION_NUMBER_PATTERN`, `MARKDOWN_HEADING_PATTERN`, `validate_file()`, `create_paragraph_data()`, `parse_markdown()`
 - `docx_parser.py` - Microsoft Word .docx file parser using python-docx
 - `pdf_parser.py` - PDF file parser using PyMuPDF (fast)
 - `mineru_parser.py` - PDF file parser using MinerU (high quality)
 - `docling_parser.py` - PDF file parser using Docling (high quality); also contains `DoclingParser` which handles both .pdf and .docx
 - `textin_parser.py` - Multi-format parser using Textin xParse API; supports .pdf, .docx, .doc, .pptx, .xlsx, .html, .txt
+
+## Shared Utilities (`utils.py`)
+
+All parsers import from `utils.py` to avoid duplication:
+
+- `SECTION_NUMBER_PATTERN` — regex for section numbers like `1.2.3`; used by all parsers
+- `MARKDOWN_HEADING_PATTERN` — regex for markdown headings like `## Title`; used by MinerU and Docling parsers
+- `validate_file(file_path, supported_extensions)` — checks existence and extension; raises `FileNotFoundError` / `ValueError`
+- `create_paragraph_data(text, index, start_char, is_heading, heading_level)` — builds the standard paragraph metadata dict
+- `parse_markdown(md_content)` — converts markdown text to `(paragraphs_data, content_parts)`; shared by `MineruPdfParser` and `DoclingPdfParser`
 
 ## Protocol
 

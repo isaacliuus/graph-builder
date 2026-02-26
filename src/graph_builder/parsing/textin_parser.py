@@ -1,9 +1,10 @@
 """Parser for documents using Textin xParse API."""
 
-import re
 from pathlib import Path
 
 from graph_builder.models import Document
+from graph_builder.parsing.utils import SECTION_NUMBER_PATTERN as _SECTION_NUMBER_PATTERN
+from graph_builder.parsing.utils import validate_file
 
 
 class TextinParser:
@@ -15,7 +16,6 @@ class TextinParser:
     """
 
     SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".doc", ".pptx", ".xlsx", ".html", ".txt"}
-    SECTION_NUMBER_PATTERN = re.compile(r"^(\d+(?:\.\d+)*\.?)\s+")
 
     API_URL = "https://api.textin.com/ai/service/v1/pdf_to_markdown"
 
@@ -54,16 +54,7 @@ class TextinParser:
             FileNotFoundError: If file does not exist.
             RuntimeError: If the API request fails.
         """
-        file_path = Path(file_path)
-
-        if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
-
-        if not self.supports(file_path):
-            raise ValueError(
-                f"Unsupported file type: {file_path.suffix}. "
-                f"Supported: {self.SUPPORTED_EXTENSIONS}"
-            )
+        file_path = validate_file(Path(file_path), self.SUPPORTED_EXTENSIONS)
 
         result = self._call_api(file_path)
 
@@ -181,7 +172,7 @@ class TextinParser:
                 style = "Normal"
 
             # Extract section number
-            section_match = self.SECTION_NUMBER_PATTERN.match(text)
+            section_match = _SECTION_NUMBER_PATTERN.match(text)
             section_number = (
                 section_match.group(1).rstrip(".") if section_match else None
             )

@@ -1,16 +1,17 @@
 """Parser for Microsoft Word .docx files."""
 
-import re
 from pathlib import Path
 
 from graph_builder.models import Document
+from graph_builder.parsing.utils import SECTION_NUMBER_PATTERN as _SECTION_NUMBER_PATTERN
+from graph_builder.parsing.utils import validate_file
 
 
 class DocxParser:
     """Parser for .docx files using python-docx."""
 
     SUPPORTED_EXTENSIONS = {".docx"}
-    SECTION_NUMBER_PATTERN = re.compile(r"^(\d+(?:\.\d+)*\.?)\s+")
+    SECTION_NUMBER_PATTERN = _SECTION_NUMBER_PATTERN
     HEADING_STYLES = {"Heading 1", "Heading 2", "Heading 3", "Title"}
 
     def __init__(self) -> None:
@@ -49,16 +50,7 @@ class DocxParser:
             ValueError: If file type is not supported.
             FileNotFoundError: If file does not exist.
         """
-        file_path = Path(file_path)
-
-        if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
-
-        if not self.supports(file_path):
-            raise ValueError(
-                f"Unsupported file type: {file_path.suffix}. "
-                f"Supported: {self.SUPPORTED_EXTENSIONS}"
-            )
+        file_path = validate_file(Path(file_path), self.SUPPORTED_EXTENSIONS)
 
         doc = self.docx.Document(file_path)
 
@@ -74,7 +66,7 @@ class DocxParser:
             style_name = para.style.name if para.style else "Normal"
             is_heading = style_name in self.HEADING_STYLES
 
-            section_match = self.SECTION_NUMBER_PATTERN.match(text)
+            section_match = _SECTION_NUMBER_PATTERN.match(text)
             section_number = section_match.group(1).rstrip(".") if section_match else None
 
             para_data = {

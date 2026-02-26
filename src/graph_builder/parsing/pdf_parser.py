@@ -1,16 +1,17 @@
 """Parser for PDF files."""
 
-import re
 from pathlib import Path
 
 from graph_builder.models import Document
+from graph_builder.parsing.utils import SECTION_NUMBER_PATTERN as _SECTION_NUMBER_PATTERN
+from graph_builder.parsing.utils import validate_file
 
 
 class PdfParser:
     """Parser for .pdf files using PyMuPDF."""
 
     SUPPORTED_EXTENSIONS = {".pdf"}
-    SECTION_NUMBER_PATTERN = re.compile(r"^(\d+(?:\.\d+)*\.?)\s+")
+    SECTION_NUMBER_PATTERN = _SECTION_NUMBER_PATTERN
 
     # Font size threshold for heading detection (relative to median font size)
     HEADING_SIZE_RATIO = 1.2
@@ -51,27 +52,56 @@ class PdfParser:
             ValueError: If file type is not supported.
             FileNotFoundError: If file does not exist.
         """
-        file_path = Path(file_path)
-
-        if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
-
-        if not self.supports(file_path):
-            raise ValueError(
-                f"Unsupported file type: {file_path.suffix}. "
-                f"Supported: {self.SUPPORTED_EXTENSIONS}"
-            )
+        file_path = validate_file(Path(file_path), self.SUPPORTED_EXTENSIONS)
 
         pdf = self.fitz.open(file_path)
+        all_blocks, font_sizes = self._collect_blocks(pdf)
+        pdf.close()
 
-        # First pass: collect all text blocks with font info to determine median font size
-        all_blocks = []
-        font_sizes = []
+        # Calculate median font size for heading detection
+        if font_sizes:
+            sorted_sizes = sorted(font_sizes)
+            mid = len(sorted_sizes) // 2
+            median_size = (
+                sorted_sizes[mid]
+                if len(sorted_sizes) % 2
+                else (sorted_sizes[mid - 1] + sorted_sizes[mid]) / 2
+            )
+        else:
+            median_size = 12
+
+        heading_threshold = median_size * self.HEADING_SIZE_RATIO
+        paragraphs_data, content_parts = self._build_paragraphs(all_blocks, heading_threshold)
+
+        full_content = "\n".join(content_parts)
+
+        return Document(
+            content=full_content,
+            source=str(file_path),
+            metadata={
+                "file_type": "pdf",
+                "file_name": file_path.name,
+                "paragraphs": paragraphs_data,
+                "paragraph_count": len(paragraphs_data),
+            },
+        )
+
+    def _collect_blocks(self, pdf) -> tuple[list[dict], list[float]]:
+        """First pass: collect text spans with font metadata from all pages.
+
+        Args:
+            pdf: Open PyMuPDF document.
+
+        Returns:
+            Tuple of (all_blocks, font_sizes) where all_blocks is a list of
+            dicts with keys "text", "size", "flags", and font_sizes is the
+            flat list of all observed font sizes.
+        """
+        all_blocks: list[dict] = []
+        font_sizes: list[float] = []
 
         for page in pdf:
-            blocks = page.get_text("dict", flags=self.fitz.TEXT_PRESERVE_WHITESPACE)[
-                "blocks"
-            ]
+            blocks = page.get_text("dict", flags=self.fitz.TEXT_PRESERVE_WHITESPACE)["blocks"]
             for block in blocks:
                 if block.get("type") != 0:  # Skip non-text blocks (images, etc.)
                     continue
@@ -89,31 +119,27 @@ class PdfParser:
                                 }
                             )
 
-        pdf.close()
+        return all_blocks, font_sizes
 
-        # Calculate median font size for heading detection
-        if font_sizes:
-            sorted_sizes = sorted(font_sizes)
-            mid = len(sorted_sizes) // 2
-            median_size = (
-                sorted_sizes[mid]
-                if len(sorted_sizes) % 2
-                else (sorted_sizes[mid - 1] + sorted_sizes[mid]) / 2
-            )
-        else:
-            median_size = 12
+    def _build_paragraphs(
+        self, all_blocks: list[dict], heading_threshold: float
+    ) -> tuple[list[dict], list[str]]:
+        """Second pass: group spans into paragraphs and build metadata.
 
-        heading_threshold = median_size * self.HEADING_SIZE_RATIO
+        Args:
+            all_blocks: Collected text spans from _collect_blocks().
+            heading_threshold: Font size above which a span is a heading.
 
-        # Second pass: group spans into paragraphs and build metadata
-        paragraphs_data = []
-        content_parts = []
+        Returns:
+            Tuple of (paragraphs_data, content_parts).
+        """
+        paragraphs_data: list[dict] = []
+        content_parts: list[str] = []
         current_char_offset = 0
 
-        # Group consecutive spans into paragraphs (simplified: each text block line = paragraph)
-        current_para_text = []
+        current_para_text: list[str] = []
         current_para_is_heading = False
-        current_para_max_size = 0
+        current_para_max_size = 0.0
 
         for i, block_info in enumerate(all_blocks):
             text = block_info["text"]
@@ -124,8 +150,6 @@ class PdfParser:
             is_bold = flags & 2**4  # Bit 4 indicates bold
             is_heading_span = size >= heading_threshold or is_bold
 
-            # Simple heuristic: if text ends with certain punctuation, it's end of paragraph
-            # Otherwise, accumulate spans
             current_para_text.append(text)
             if is_heading_span:
                 current_para_is_heading = True
@@ -138,19 +162,14 @@ class PdfParser:
             if is_last or ends_sentence or is_heading_span:
                 para_text = " ".join(current_para_text).strip()
                 if para_text:
-                    # Determine if heading
                     is_heading = current_para_is_heading
 
-                    # Extract section number
-                    section_match = self.SECTION_NUMBER_PATTERN.match(para_text)
+                    section_match = _SECTION_NUMBER_PATTERN.match(para_text)
                     section_number = (
                         section_match.group(1).rstrip(".") if section_match else None
                     )
 
-                    # Determine style based on font size
-                    if current_para_max_size >= heading_threshold * 1.3:
-                        style = "Heading"
-                    elif is_heading:
+                    if current_para_max_size >= heading_threshold * 1.3 or is_heading:
                         style = "Heading"
                     else:
                         style = "Normal"
@@ -171,17 +190,6 @@ class PdfParser:
                 # Reset for next paragraph
                 current_para_text = []
                 current_para_is_heading = False
-                current_para_max_size = 0
+                current_para_max_size = 0.0
 
-        full_content = "\n".join(content_parts)
-
-        return Document(
-            content=full_content,
-            source=str(file_path),
-            metadata={
-                "file_type": "pdf",
-                "file_name": file_path.name,
-                "paragraphs": paragraphs_data,
-                "paragraph_count": len(paragraphs_data),
-            },
-        )
+        return paragraphs_data, content_parts
