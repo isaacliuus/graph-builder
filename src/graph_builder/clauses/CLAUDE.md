@@ -121,6 +121,7 @@ Chunker that uses Textin's catalog tree (from `TextinParser`) to detect clause b
 - LLM classification: single API call per document via instructor + OpenAI, returns `ClauseClassifications` with per-clause confidence scores
 - Falls back to keyword matching (`CLAUSE_TYPE_KEYWORDS`) when no `api_key` or when a title is missing from LLM response
 - Fuzzy title matching via `difflib.SequenceMatcher` (threshold 0.7)
+- `include_preamble` parameter (default `True`): extracts text before first clause (preamble) and after last clause (postamble) as additional chunks with `chunk_type: "PREAMBLE"/"POSTAMBLE"` metadata (no `clause_type`, so they flow through entity extraction but are skipped by clause-specific logic)
 - Stores catalog tree structure in chunk metadata for downstream use
 - Selected automatically when `GRAPH_BUILDER_DOCUMENT_PARSER=textin`
 - `PipelineBuilder.entity_graph_with_llm()` passes `api_key` and `model` to enable LLM classification

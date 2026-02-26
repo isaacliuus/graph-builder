@@ -194,7 +194,7 @@ class TestTextinClauseChunkerLevel2:
         ]
 
         doc = _make_textin_document(markdown, toc, paragraphs)
-        chunker = TextinClauseChunker(min_clause_length=10)  # default clause_level=2
+        chunker = TextinClauseChunker(min_clause_length=10, include_preamble=False)
         chunks = chunker.chunk([doc])
 
         assert len(chunks) == 3
@@ -227,7 +227,7 @@ class TestTextinClauseChunkerLevel2:
         ]
 
         doc = _make_textin_document(markdown, toc, paragraphs)
-        chunker = TextinClauseChunker(min_clause_length=10)
+        chunker = TextinClauseChunker(min_clause_length=10, include_preamble=False)
         chunks = chunker.chunk([doc])
 
         assert len(chunks) == 2
@@ -264,7 +264,7 @@ class TestTextinClauseChunkerLevel2:
         ]
 
         doc = _make_textin_document(markdown, toc, paragraphs)
-        chunker = TextinClauseChunker(min_clause_length=10)
+        chunker = TextinClauseChunker(min_clause_length=10, include_preamble=False)
         chunks = chunker.chunk([doc])
 
         assert len(chunks) == 2  # only level-2 entries
@@ -333,7 +333,7 @@ class TestTextinClauseChunkerLevel2:
         ]
 
         doc = _make_textin_document(markdown, toc, paragraphs)
-        chunker = TextinClauseChunker(min_clause_length=10)
+        chunker = TextinClauseChunker(min_clause_length=10, include_preamble=False)
         chunks = chunker.chunk([doc])
 
         assert len(chunks) == 3
@@ -387,7 +387,7 @@ class TestTextinClauseChunkerGeneral:
         ]
 
         doc = _make_textin_document(markdown, toc, paragraphs)
-        chunker = TextinClauseChunker(min_clause_length=10)
+        chunker = TextinClauseChunker(min_clause_length=10, include_preamble=False)
         chunks = chunker.chunk([doc])
 
         assert len(chunks) == 1
@@ -428,7 +428,7 @@ class TestTextinClauseChunkerGeneral:
         ]
 
         doc = _make_textin_document(markdown, toc, paragraphs)
-        chunker = TextinClauseChunker(min_clause_length=10)
+        chunker = TextinClauseChunker(min_clause_length=10, include_preamble=False)
         chunks = chunker.chunk([doc])
 
         assert len(chunks) == 1
@@ -509,7 +509,7 @@ class TestTextinClauseChunkerGeneral:
         ]
 
         doc = _make_textin_document(markdown, toc, paragraphs)
-        chunker = TextinClauseChunker(min_clause_length=10, clause_level=3)
+        chunker = TextinClauseChunker(min_clause_length=10, clause_level=3, include_preamble=False)
         chunks = chunker.chunk([doc])
 
         assert len(chunks) == 2
@@ -537,7 +537,7 @@ class TestTextinClauseChunkerGeneral:
         ]
 
         doc = _make_textin_document(markdown, toc, paragraphs)
-        chunker = TextinClauseChunker(min_clause_length=10)
+        chunker = TextinClauseChunker(min_clause_length=10, include_preamble=False)
         chunks = chunker.chunk([doc])
 
         assert len(chunks) == 1
@@ -563,7 +563,7 @@ class TestTextinClauseChunkerGeneral:
         ]
 
         doc = _make_textin_document(markdown, toc, paragraphs)
-        chunker = TextinClauseChunker(min_clause_length=10)
+        chunker = TextinClauseChunker(min_clause_length=10, include_preamble=False)
         chunks = chunker.chunk([doc])
 
         assert len(chunks) == 1
@@ -714,7 +714,7 @@ class TestTextinClauseChunkerLLM:
     def test_llm_classification_used_when_api_key_provided(self, mocker):
         """Test that LLM classification is called when api_key is set."""
         doc = self._make_contract_doc()
-        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test")
+        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test", include_preamble=False)
 
         mock_client = mocker.MagicMock()
         mock_client.chat.completions.create.return_value = self._mock_llm_response()
@@ -728,7 +728,7 @@ class TestTextinClauseChunkerLLM:
     def test_llm_classification_types_and_confidence(self, mocker):
         """Test that LLM classification results are used for type and confidence."""
         doc = self._make_contract_doc()
-        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test")
+        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test", include_preamble=False)
 
         mock_client = mocker.MagicMock()
         mock_client.chat.completions.create.return_value = self._mock_llm_response()
@@ -746,7 +746,7 @@ class TestTextinClauseChunkerLLM:
     def test_fallback_to_keyword_when_no_api_key(self):
         """Test that keyword matching is used when api_key is empty."""
         doc = self._make_contract_doc()
-        chunker = TextinClauseChunker(min_clause_length=10)  # no api_key
+        chunker = TextinClauseChunker(min_clause_length=10, include_preamble=False)  # no api_key
 
         chunks = chunker.chunk([doc])
 
@@ -758,7 +758,7 @@ class TestTextinClauseChunkerLLM:
     def test_llm_prompt_contains_all_titles(self, mocker):
         """Test that the LLM prompt includes all clause titles and snippets."""
         doc = self._make_contract_doc()
-        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test")
+        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test", include_preamble=False)
 
         mock_client = mocker.MagicMock()
         mock_client.chat.completions.create.return_value = self._mock_llm_response()
@@ -778,7 +778,7 @@ class TestTextinClauseChunkerLLM:
         from graph_builder.models.clause import ClauseType
 
         doc = self._make_contract_doc()
-        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test")
+        chunker = TextinClauseChunker(min_clause_length=10, api_key="sk-test", include_preamble=False)
 
         # LLM only returns 2 of 3 clauses
         partial_response = ClauseClassifications(clauses=[
@@ -805,3 +805,264 @@ class TestTextinClauseChunkerLLM:
         extractor = TextinClauseExtractor(api_key="sk-test", model="gpt-4o")
         assert extractor._chunker.api_key == "sk-test"
         assert extractor._chunker.model == "gpt-4o"
+
+
+class TestTextinClauseChunkerPreamble:
+    """Tests for preamble and postamble extraction."""
+
+    def test_preamble_extracted(self):
+        """Test that preamble appears as first chunk with chunk_type PREAMBLE."""
+        markdown = (
+            "Contract Agreement\n\n"
+            "Between Party A (Acme Corp) and Party B (Beta LLC).\n\n"
+            "## Article 1 Definitions\n\n"
+            "The following terms are defined for this agreement.\n"
+        )
+        toc = [
+            {"title": "Article 1 Definitions", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Contract Agreement", "start_char": 0, "end_char": 18},
+            {"text": "Between Party A (Acme Corp) and Party B (Beta LLC).", "start_char": 20, "end_char": 71},
+            {"text": "Article 1 Definitions", "start_char": 73, "end_char": 94},
+            {"text": "The following terms are defined for this agreement.", "start_char": 96, "end_char": 147},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        chunker = TextinClauseChunker(min_clause_length=10)
+        chunks = chunker.chunk([doc])
+
+        assert len(chunks) == 2
+        preamble = chunks[0]
+        assert preamble.metadata["chunk_type"] == "PREAMBLE"
+        assert "clause_type" not in preamble.metadata
+        assert preamble.metadata["section_title"] == "Preamble"
+        assert "Acme Corp" in preamble.content
+        assert "Beta LLC" in preamble.content
+
+    def test_postamble_extracted(self):
+        """Test that postamble appears as last chunk with chunk_type POSTAMBLE."""
+        markdown = (
+            "## Article 1 Definitions\n\n"
+            "The following terms are defined for this agreement.\n\n"
+            "Signature Block: Signed by John Smith, CEO of Acme Corp on 2024-01-01.\n"
+        )
+        toc = [
+            {"title": "Article 1 Definitions", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Article 1 Definitions", "start_char": 0, "end_char": 21},
+            {"text": "The following terms are defined for this agreement.", "start_char": 23, "end_char": 74},
+            {"text": "Signature Block: Signed by John Smith, CEO of Acme Corp on 2024-01-01.", "start_char": 76, "end_char": 146},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        # The clause ends at len(content) since there's no next boundary title,
+        # so postamble is empty. We need a structure where the clause boundary
+        # ends before the postamble. Use a level-1 entry to mark the boundary.
+        toc_with_appendix = [
+            {"title": "Article 1 Definitions", "hierarchy": 2},
+            {"title": "Signatures", "hierarchy": 1},
+        ]
+        paragraphs_with_sig = [
+            {"text": "Article 1 Definitions", "start_char": 0, "end_char": 21},
+            {"text": "The following terms are defined for this agreement.", "start_char": 23, "end_char": 74},
+            {"text": "Signatures", "start_char": 76, "end_char": 86},
+            {"text": "Signed by John Smith, CEO of Acme Corp on 2024-01-01.", "start_char": 88, "end_char": 141},
+        ]
+        markdown2 = (
+            "Article 1 Definitions\n\n"
+            "The following terms are defined for this agreement.\n\n"
+            "Signatures\n\n"
+            "Signed by John Smith, CEO of Acme Corp on 2024-01-01.\n"
+        )
+
+        doc2 = _make_textin_document(markdown2, toc_with_appendix, paragraphs_with_sig)
+        chunker = TextinClauseChunker(min_clause_length=10)
+        chunks = chunker.chunk([doc2])
+
+        assert len(chunks) == 2
+        postamble = chunks[-1]
+        assert postamble.metadata["chunk_type"] == "POSTAMBLE"
+        assert "clause_type" not in postamble.metadata
+        assert postamble.metadata["section_title"] == "Postamble"
+        assert "John Smith" in postamble.content
+
+    def test_preamble_and_postamble_with_clauses(self):
+        """Test full contract: [preamble, clause1, ..., clauseN, postamble]."""
+        markdown = (
+            "Contract Agreement\n\n"
+            "Between Party A (Acme Corp) and Party B (Beta LLC) regarding services.\n\n"
+            "Article 1 Definitions\n\n"
+            "Terms defined here for the agreement.\n\n"
+            "Article 2 Payment\n\n"
+            "Payment is due within 30 days of invoice.\n\n"
+            "Signatures\n\n"
+            "Signed by authorized representatives of both parties on this date.\n"
+        )
+        toc = [
+            {"title": "Article 1 Definitions", "hierarchy": 2},
+            {"title": "Article 2 Payment", "hierarchy": 2},
+            {"title": "Signatures", "hierarchy": 1},
+        ]
+        paragraphs = [
+            {"text": "Contract Agreement", "start_char": 0, "end_char": 18},
+            {"text": "Between Party A (Acme Corp) and Party B (Beta LLC) regarding services.", "start_char": 20, "end_char": 90},
+            {"text": "Article 1 Definitions", "start_char": 92, "end_char": 113},
+            {"text": "Terms defined here for the agreement.", "start_char": 115, "end_char": 151},
+            {"text": "Article 2 Payment", "start_char": 153, "end_char": 171},
+            {"text": "Payment is due within 30 days of invoice.", "start_char": 173, "end_char": 214},
+            {"text": "Signatures", "start_char": 216, "end_char": 226},
+            {"text": "Signed by authorized representatives of both parties on this date.", "start_char": 228, "end_char": 293},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        chunker = TextinClauseChunker(min_clause_length=10)
+        chunks = chunker.chunk([doc])
+
+        assert len(chunks) == 4
+        assert chunks[0].metadata["chunk_type"] == "PREAMBLE"
+        assert chunks[1].metadata["clause_type"] == "DEFINITIONS"
+        assert chunks[2].metadata["clause_type"] == "PAYMENT"
+        assert chunks[3].metadata["chunk_type"] == "POSTAMBLE"
+
+    def test_short_preamble_filtered(self):
+        """Test that preamble shorter than min_clause_length produces no preamble chunk."""
+        markdown = (
+            "Title\n\n"
+            "## Article 1 Definitions\n\n"
+            "The following terms are defined for this agreement.\n"
+        )
+        toc = [
+            {"title": "Article 1 Definitions", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Title", "start_char": 0, "end_char": 5},
+            {"text": "Article 1 Definitions", "start_char": 7, "end_char": 28},
+            {"text": "The following terms are defined for this agreement.", "start_char": 30, "end_char": 81},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        chunker = TextinClauseChunker(min_clause_length=50)
+        chunks = chunker.chunk([doc])
+
+        # "Title" is only 5 chars, well under min_clause_length=50
+        assert len(chunks) == 1
+        assert chunks[0].metadata["clause_type"] == "DEFINITIONS"
+
+    def test_no_preamble_when_disabled(self):
+        """Test that include_preamble=False produces clause-only chunks."""
+        markdown = (
+            "Contract Agreement\n\n"
+            "Between Party A (Acme Corp) and Party B (Beta LLC).\n\n"
+            "## Article 1 Definitions\n\n"
+            "The following terms are defined for this agreement.\n"
+        )
+        toc = [
+            {"title": "Article 1 Definitions", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Contract Agreement", "start_char": 0, "end_char": 18},
+            {"text": "Between Party A (Acme Corp) and Party B (Beta LLC).", "start_char": 20, "end_char": 71},
+            {"text": "Article 1 Definitions", "start_char": 73, "end_char": 94},
+            {"text": "The following terms are defined for this agreement.", "start_char": 96, "end_char": 147},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        chunker = TextinClauseChunker(min_clause_length=10, include_preamble=False)
+        chunks = chunker.chunk([doc])
+
+        assert len(chunks) == 1
+        assert chunks[0].metadata["clause_type"] == "DEFINITIONS"
+        assert all("chunk_type" not in c.metadata for c in chunks)
+
+    def test_no_preamble_when_clause_starts_at_beginning(self):
+        """Test that first clause at offset 0 produces no preamble."""
+        markdown = (
+            "Article 1 Definitions\n\n"
+            "The following terms are defined for this agreement.\n"
+        )
+        toc = [
+            {"title": "Article 1 Definitions", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "Article 1 Definitions", "start_char": 0, "end_char": 21},
+            {"text": "The following terms are defined for this agreement.", "start_char": 23, "end_char": 74},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        chunker = TextinClauseChunker(min_clause_length=10)
+        chunks = chunker.chunk([doc])
+
+        assert len(chunks) == 1
+        assert chunks[0].metadata["clause_type"] == "DEFINITIONS"
+
+    def test_extractor_skips_preamble_postamble(self):
+        """Test that TextinClauseExtractor.extract() returns only Clause objects."""
+        markdown = (
+            "Contract Agreement\n\n"
+            "Between Party A (Acme Corp) and Party B (Beta LLC) regarding services.\n\n"
+            "Article 1 Definitions\n\n"
+            "Terms defined here for the agreement.\n\n"
+            "Article 2 Payment\n\n"
+            "Payment is due within 30 days of invoice.\n\n"
+            "Signatures\n\n"
+            "Signed by authorized representatives of both parties on this date.\n"
+        )
+        toc = [
+            {"title": "Article 1 Definitions", "hierarchy": 2},
+            {"title": "Article 2 Payment", "hierarchy": 2},
+            {"title": "Signatures", "hierarchy": 1},
+        ]
+        paragraphs = [
+            {"text": "Contract Agreement", "start_char": 0, "end_char": 18},
+            {"text": "Between Party A (Acme Corp) and Party B (Beta LLC) regarding services.", "start_char": 20, "end_char": 90},
+            {"text": "Article 1 Definitions", "start_char": 92, "end_char": 113},
+            {"text": "Terms defined here for the agreement.", "start_char": 115, "end_char": 151},
+            {"text": "Article 2 Payment", "start_char": 153, "end_char": 171},
+            {"text": "Payment is due within 30 days of invoice.", "start_char": 173, "end_char": 214},
+            {"text": "Signatures", "start_char": 216, "end_char": 226},
+            {"text": "Signed by authorized representatives of both parties on this date.", "start_char": 228, "end_char": 293},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        extractor = TextinClauseExtractor(min_clause_length=10)
+        clauses = extractor.extract(doc)
+
+        # Only clause chunks, no preamble/postamble
+        assert len(clauses) == 2
+        from graph_builder.models.clause import Clause
+        for clause in clauses:
+            assert isinstance(clause, Clause)
+            assert clause.type.value in ("DEFINITIONS", "PAYMENT")
+
+    def test_chinese_preamble_with_party_info(self):
+        """Test Chinese contract with party info before first article."""
+        markdown = (
+            "设计服务合作协议\n\n"
+            "甲方：深圳市科技有限公司\n"
+            "乙方：北京设计咨询有限公司\n\n"
+            "第一条 合作内容\n\n"
+            "甲方提供设计要求，乙方提供本协议约定的设计服务。\n"
+        )
+        toc = [
+            {"title": "设计服务合作协议", "hierarchy": 1},
+            {"title": "第一条 合作内容", "hierarchy": 2},
+        ]
+        paragraphs = [
+            {"text": "设计服务合作协议", "start_char": 0, "end_char": 8},
+            {"text": "甲方：深圳市科技有限公司", "start_char": 10, "end_char": 22},
+            {"text": "乙方：北京设计咨询有限公司", "start_char": 23, "end_char": 36},
+            {"text": "第一条 合作内容", "start_char": 38, "end_char": 46},
+            {"text": "甲方提供设计要求，乙方提供本协议约定的设计服务。", "start_char": 48, "end_char": 71},
+        ]
+
+        doc = _make_textin_document(markdown, toc, paragraphs)
+        chunker = TextinClauseChunker(min_clause_length=10)
+        chunks = chunker.chunk([doc])
+
+        assert len(chunks) == 2
+        preamble = chunks[0]
+        assert preamble.metadata["chunk_type"] == "PREAMBLE"
+        assert "深圳市科技有限公司" in preamble.content
+        assert "北京设计咨询有限公司" in preamble.content

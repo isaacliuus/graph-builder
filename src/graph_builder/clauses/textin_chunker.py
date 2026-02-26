@@ -45,6 +45,7 @@ class TextinClauseChunker:
         clause_level: int = 2,
         api_key: str = "",
         model: str = "gpt-4o-mini",
+        include_preamble: bool = True,
     ) -> None:
         """Initialize the chunker.
 
@@ -57,11 +58,16 @@ class TextinClauseChunker:
             api_key: OpenAI API key for LLM classification. If empty, falls
                 back to keyword matching.
             model: LLM model for clause type classification.
+            include_preamble: If True, extract preamble (text before first
+                clause) and postamble (text after last clause) as additional
+                chunks for entity extraction. These chunks omit clause_type
+                metadata so they are skipped by clause-specific logic.
         """
         self.min_clause_length = min_clause_length
         self.clause_level = clause_level
         self.api_key = api_key
         self.model = model
+        self.include_preamble = include_preamble
         self._client = None
 
     @property
@@ -263,6 +269,42 @@ Clauses:
             ]
             llm_results = self._classify_clauses_llm(clause_items)
 
+        # Extract preamble and postamble
+        preamble_chunk = None
+        postamble_chunk = None
+        if self.include_preamble and clause_data:
+            first_clause_start = min(start for _, start, _, _ in clause_data)
+            preamble_text = content[:first_clause_start].strip()
+            if len(preamble_text) >= self.min_clause_length:
+                preamble_chunk = Chunk(
+                    content=preamble_text,
+                    document_id=document.id,
+                    start_index=0,
+                    end_index=first_clause_start,
+                    metadata={
+                        "chunk_type": "PREAMBLE",
+                        "section_title": "Preamble",
+                        "section_number": None,
+                        "confidence": 1.0,
+                    },
+                )
+
+            last_clause_end = max(end for _, _, end, _ in clause_data)
+            postamble_text = content[last_clause_end:].strip()
+            if len(postamble_text) >= self.min_clause_length:
+                postamble_chunk = Chunk(
+                    content=postamble_text,
+                    document_id=document.id,
+                    start_index=last_clause_end,
+                    end_index=len(content),
+                    metadata={
+                        "chunk_type": "POSTAMBLE",
+                        "section_title": "Postamble",
+                        "section_number": None,
+                        "confidence": 1.0,
+                    },
+                )
+
         for node, start_char, end_char, clause_content in clause_data:
             title = node.get("title", "")
 
@@ -304,6 +346,11 @@ Clauses:
                     },
                 )
             )
+
+        if preamble_chunk:
+            chunks.insert(0, preamble_chunk)
+        if postamble_chunk:
+            chunks.append(postamble_chunk)
 
         return chunks
 
@@ -399,12 +446,14 @@ class TextinClauseExtractor:
         clause_level: int = 2,
         api_key: str = "",
         model: str = "gpt-4o-mini",
+        include_preamble: bool = True,
     ) -> None:
         self._chunker = TextinClauseChunker(
             min_clause_length=min_clause_length,
             clause_level=clause_level,
             api_key=api_key,
             model=model,
+            include_preamble=include_preamble,
         )
 
     def extract(self, document: Document) -> list[Clause]:
