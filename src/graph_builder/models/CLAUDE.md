@@ -9,6 +9,20 @@ Pydantic data models for the knowledge graph pipeline.
 - `relationship.py` - Relationship model with RelationshipType enum
 - `graph.py` - KnowledgeGraph, GraphNode, and GraphEdge models
 
+## EntityType Values
+
+```python
+class EntityType(str, Enum):
+    PERSON = "PERSON"
+    ORGANIZATION = "ORG"
+    LOCATION = "LOC"
+    DATE = "DATE"
+    EVENT = "EVENT"
+    PRODUCT = "PRODUCT"
+    CONCEPT = "CONCEPT"
+    OTHER = "OTHER"
+```
+
 ## Conventions
 
 - All models inherit from `pydantic.BaseModel`

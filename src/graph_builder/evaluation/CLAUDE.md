@@ -53,7 +53,7 @@ print(f"Relationship F1: {result.relationship_f1}")
 
 - **Entity match**: canonical_name (lowercase, stripped) AND type must match
 - **Relationship match**: source name, target name, AND type must all match
-- Entity types are normalized (e.g., "ORGANIZATION" -> "ORG", "LOCATION" -> "LOC")
+- Entity types are normalized via `normalize_entity_type()` (e.g., "ORGANIZATION" → "ORG", "LOCATION"/"GPE" → "LOC", unknown types → "OTHER")
 
 ## Standalone Script
 

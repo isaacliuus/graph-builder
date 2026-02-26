@@ -132,3 +132,4 @@ Adapter that wraps `TextinClauseChunker` and implements the `ClauseExtractor` pr
 
 - Used by `scripts/run_clause_evaluation.py --pdf-parser textin`
 - Derives `paragraph_index` from `start_char` against paragraph metadata
+- Skips preamble/postamble chunks (those without `clause_type` in metadata)
